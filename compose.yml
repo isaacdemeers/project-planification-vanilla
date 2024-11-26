@@ -1,0 +1,52 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: strongPassword
+      POSTGRES_DB: pp-base
+      POSTGRES_HOST: db
+    networks:
+      - app-network
+    depends_on:
+      - db
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: strongPassword
+      POSTGRES_DB: pp-base
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    volumes:
+      - ./servers.json:/pgadmin/servers.json
+    networks:
+      - app-network
+
+volumes:
+  db-data:
+
+
+networks:
+  app-network:
