@@ -2,27 +2,18 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { hashPassword, verifyPassword, generateSalt } from "@/lib/password"
 import { signInSchema } from "./lib/zod"
-import PostgresAdapter from "@auth/pg-adapter"
+import { authConfig } from "./app/api/auth/[...nextauth]/config"
 import db from "@/lib/db.server"
 
-export const config = {
-    runtime: 'nodejs',
-}
-
-export const { handlers, signIn, signOut, auth } = NextAuth({
-    adapter: PostgresAdapter(db),
+export const { handlers, auth, signIn, signOut } = NextAuth({
+    ...authConfig,
     providers: [
         Credentials({
-            credentials: {
-                email: {},
-                password: {},
-            },
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) return null;
 
                 const { email, password } = await signInSchema.parseAsync(credentials)
 
-                // Vérifier l'utilisateur existant
                 const user = await db.query(
                     'SELECT * FROM users WHERE email = $1',
                     [email]
@@ -30,7 +21,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
                 if (!user) return null;
 
-                // Vérifier le mot de passe
                 const isValid = await verifyPassword(
                     password,
                     user.password_salt,
@@ -47,10 +37,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
         }),
     ],
-    pages: {
-        signIn: '/login',
-    },
-    session: {
-        strategy: 'jwt'
-    }
 })
