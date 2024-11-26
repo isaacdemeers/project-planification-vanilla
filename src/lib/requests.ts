@@ -38,3 +38,35 @@ export async function createIntervenant(intervenant: Omit<Intervenant, 'id' | 'c
   return data;
 }
 
+export async function updateIntervenant(id: string, intervenant: Partial<Omit<Intervenant, 'id' | 'created_at' | 'updated_at'>>): Promise<Intervenant> {
+  const response = await fetch(`/api/intervenant/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(intervenant),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error('Server error:', data);
+    throw new Error(data.error || 'Failed to update intervenant');
+  }
+
+  return data;
+}
+
+export async function deleteIntervenant(id: string): Promise<void> {
+  const response = await fetch(`/api/intervenant/${id}`, {
+    method: 'DELETE',
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error('Server error:', data);
+    throw new Error(data.error || 'Failed to delete intervenant');
+  }
+}
+
