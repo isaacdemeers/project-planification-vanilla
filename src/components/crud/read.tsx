@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { getIntervenants, deleteIntervenant, regenerateConnectKey, regenerateAllKeys, type Intervenant } from '@/lib/requests';
 import UpdateIntervenant from './update';
 import DeleteConfirmation from './delete';
+import CopyLinkButton from './copy-link-button';
 
 interface IntervenantsListProps {
     refreshTrigger?: number;
@@ -150,9 +151,12 @@ export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsLis
                                 <p className="text-sm font-mono bg-gray-100 p-2 rounded break-all">
                                     Clé de connexion: {intervenant.connect_key}
                                 </p>
-                                <p className="text-xs text-gray-500">
-                                    Clé générée le: {new Date(intervenant.connect_key_created_at).toLocaleString()}
-                                </p>
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs text-gray-500">
+                                        Clé générée le: {new Date(intervenant.connect_key_created_at).toLocaleString()}
+                                    </p>
+                                    <CopyLinkButton connectKey={intervenant.connect_key} />
+                                </div>
                                 <KeyValidityStatus
                                     createdAt={new Date(intervenant.connect_key_created_at)}
                                     validityDays={intervenant.connect_key_validity_days}
