@@ -12,6 +12,7 @@ async function ensureTableExists() {
                 lastname VARCHAR(255) NOT NULL,
                 availabilities JSONB NOT NULL DEFAULT '{}',
                 email VARCHAR(255) NOT NULL UNIQUE,
+                connect_key UUID NOT NULL DEFAULT gen_random_uuid(),
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );

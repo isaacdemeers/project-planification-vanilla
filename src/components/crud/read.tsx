@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getIntervenants, deleteIntervenant, type Intervenant } from '@/lib/requests';
 import UpdateIntervenant from './update';
-import DeleteConfirmation from './delete-confirmation';
+import DeleteConfirmation from './delete';
 
 interface IntervenantsListProps {
     refreshTrigger?: number;
@@ -89,8 +89,11 @@ export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsLis
                                 {intervenant.name} {intervenant.lastname}
                             </h3>
                             <p className="text-gray-600">{intervenant.email}</p>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-gray-500 mt-1">
                                 Créé le: {new Date(intervenant.created_at).toLocaleDateString()}
+                            </p>
+                            <p className="text-sm font-mono bg-gray-100 p-2 rounded mt-2 break-all">
+                                Clé de connexion: {intervenant.connect_key}
                             </p>
                             <div className="mt-2 flex gap-2">
                                 <button

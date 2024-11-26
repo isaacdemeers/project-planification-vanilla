@@ -3,16 +3,32 @@
 import { useState } from 'react';
 import { createIntervenant } from '@/lib/requests';
 
-interface AddIntervenantProps {
-    onIntervenantAdded: () => void;
+interface ErrorBannerProps {
+    message: string;
+    onClose: () => void;
 }
 
-export default function AddIntervenant({ onIntervenantAdded }: AddIntervenantProps) {
+function ErrorBanner({ message, onClose }: ErrorBannerProps) {
+    return (
+        <div className="fixed top-4 right-4 left-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex justify-between items-center shadow-lg">
+            <span>{message}</span>
+            <button
+                onClick={onClose}
+                className="text-red-700 font-bold hover:text-red-900"
+            >
+                ×
+            </button>
+        </div>
+    );
+}
+
+export default function AddIntervenant({ onIntervenantAdded }: { onIntervenantAdded: () => void }) {
     const [formData, setFormData] = useState({
         name: '',
         lastname: '',
         email: '',
-        availabilities: {}
+        availabilities: {},
+        connect_key: crypto.randomUUID()
     });
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
@@ -28,11 +44,14 @@ export default function AddIntervenant({ onIntervenantAdded }: AddIntervenantPro
                 name: '',
                 lastname: '',
                 email: '',
-                availabilities: {}
+                availabilities: {},
+                connect_key: crypto.randomUUID()
             });
             onIntervenantAdded();
-        } catch (err) {
-            setError('Erreur lors de la création de l\'intervenant');
+        } catch (err: any) {
+            // Extraire le message d'erreur de la réponse de l'API si disponible
+            const errorMessage = err.message || 'Erreur lors de la création de l\'intervenant';
+            setError(errorMessage);
             setSuccess(false);
         }
     };
@@ -45,11 +64,21 @@ export default function AddIntervenant({ onIntervenantAdded }: AddIntervenantPro
     };
 
     return (
-        <div className="max-w-md mx-auto p-6">
+        <div className="max-w-md mx-auto p-6 relative">
+            {error && (
+                <ErrorBanner
+                    message={error}
+                    onClose={() => setError(null)}
+                />
+            )}
+
             <h2 className="text-2xl font-bold mb-4">Ajouter un intervenant</h2>
 
-            {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>}
-            {success && <div className="bg-green-100 text-green-700 p-3 rounded mb-4">Intervenant créé avec succès!</div>}
+            {success && (
+                <div className="bg-green-100 text-green-700 p-3 rounded mb-4">
+                    Intervenant créé avec succès!
+                </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>

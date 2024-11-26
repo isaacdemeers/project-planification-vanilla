@@ -4,6 +4,7 @@ export type Intervenant = {
   lastname: string;
   availabilities: object;
   email: string;
+  connect_key: string;
   created_at: Date;
   updated_at: Date;
 }
