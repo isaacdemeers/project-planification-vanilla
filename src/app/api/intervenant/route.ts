@@ -54,11 +54,19 @@ export async function POST(request: Request) {
 
         const client = await db.connect();
         try {
+            const settingsResult = await client.query(
+                'SELECT value FROM "Settings" WHERE key = $1',
+                ['default_key_validity']
+            );
+            const defaultValidity = settingsResult.rows[0]?.value?.days || 30;
+
             const result = await client.query(
-                `INSERT INTO "Intervenant" (name, lastname, availabilities, email)
-                 VALUES ($1, $2, $3, $4)
-                 RETURNING *`,
-                [body.name, body.lastname, body.availabilities || {}, body.email]
+                `INSERT INTO "Intervenant" (
+                    name, lastname, availabilities, email, connect_key_validity_days
+                )
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING *`,
+                [body.name, body.lastname, body.availabilities || {}, body.email, defaultValidity]
             );
             return NextResponse.json(result.rows[0]);
         } catch (error: any) {

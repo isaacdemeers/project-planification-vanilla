@@ -88,3 +88,18 @@ export async function regenerateConnectKey(id: string): Promise<Intervenant> {
   return data;
 }
 
+export async function regenerateAllKeys(): Promise<Intervenant[]> {
+  const response = await fetch('/api/intervenant/regenerate-all-keys', {
+    method: 'POST',
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error('Server error:', data);
+    throw new Error(data.error || 'Failed to regenerate all keys');
+  }
+
+  return data;
+}
+

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getIntervenants, deleteIntervenant, regenerateConnectKey, type Intervenant } from '@/lib/requests';
+import { getIntervenants, deleteIntervenant, regenerateConnectKey, regenerateAllKeys, type Intervenant } from '@/lib/requests';
 import UpdateIntervenant from './update';
 import DeleteConfirmation from './delete';
 
@@ -37,6 +37,7 @@ export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsLis
     const [error, setError] = useState<string | null>(null);
     const [editingIntervenant, setEditingIntervenant] = useState<Intervenant | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [regeneratingAll, setRegeneratingAll] = useState(false);
 
     const fetchIntervenants = async () => {
         try {
@@ -74,6 +75,18 @@ export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsLis
         }
     };
 
+    const handleRegenerateAllKeys = async () => {
+        try {
+            setRegeneratingAll(true);
+            await regenerateAllKeys();
+            await fetchIntervenants();
+        } catch (error) {
+            console.error('Error regenerating all keys:', error);
+        } finally {
+            setRegeneratingAll(false);
+        }
+    };
+
     if (loading) {
         return <div className="text-center p-4">Chargement...</div>;
     }
@@ -84,7 +97,19 @@ export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsLis
 
     return (
         <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Liste des intervenants</h2>
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">Liste des intervenants</h2>
+                {intervenants.length > 0 && (
+                    <button
+                        onClick={handleRegenerateAllKeys}
+                        disabled={regeneratingAll}
+                        className={`bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${regeneratingAll ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                    >
+                        {regeneratingAll ? 'Régénération...' : 'Régénérer toutes les clés'}
+                    </button>
+                )}
+            </div>
 
             {editingIntervenant && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
@@ -120,9 +145,7 @@ export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsLis
                                 {intervenant.name} {intervenant.lastname}
                             </h3>
                             <p className="text-gray-600">{intervenant.email}</p>
-                            <p className="text-sm text-gray-500 mt-1">
-                                Créé le: {new Date(intervenant.created_at).toLocaleDateString()}
-                            </p>
+
                             <div className="mt-2 space-y-2">
                                 <p className="text-sm font-mono bg-gray-100 p-2 rounded break-all">
                                     Clé de connexion: {intervenant.connect_key}

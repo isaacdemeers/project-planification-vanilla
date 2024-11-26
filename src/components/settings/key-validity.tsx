@@ -26,6 +26,13 @@ export default function KeyValiditySettings() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validation de la durée
+        if (days <= 0) {
+            setError('La durée doit être supérieure à 0');
+            return;
+        }
+
         try {
             const response = await fetch('/api/settings', {
                 method: 'PUT',
@@ -34,9 +41,21 @@ export default function KeyValiditySettings() {
             });
             if (!response.ok) throw new Error('Erreur lors de la mise à jour');
             setSuccess(true);
+            setError(null);
             setTimeout(() => setSuccess(false), 3000);
         } catch (error) {
             setError('Erreur lors de la mise à jour');
+        }
+    };
+
+    const handleDaysChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseInt(e.target.value);
+        // Empêcher les valeurs négatives ou nulles
+        if (value > 0) {
+            setDays(value);
+            setError(null);
+        } else {
+            setError('La durée doit être supérieure à 0');
         }
     };
 
@@ -65,13 +84,14 @@ export default function KeyValiditySettings() {
                         min="1"
                         max="365"
                         value={days}
-                        onChange={(e) => setDays(parseInt(e.target.value))}
+                        onChange={handleDaysChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     />
                 </div>
                 <button
                     type="submit"
-                    className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    disabled={days <= 0}
+                    className={`w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${days <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                     Enregistrer
                 </button>
