@@ -6,7 +6,6 @@ COPY package*.json ./
 
 # Installer les dépendances
 RUN npm install
-RUN npm install tailwindcss-animate
 
 # Copier le reste des fichiers
 COPY . .

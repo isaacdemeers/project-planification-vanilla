@@ -1,12 +1,34 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getIntervenants, deleteIntervenant, type Intervenant } from '@/lib/requests';
+import { getIntervenants, deleteIntervenant, regenerateConnectKey, type Intervenant } from '@/lib/requests';
 import UpdateIntervenant from './update';
 import DeleteConfirmation from './delete';
 
 interface IntervenantsListProps {
     refreshTrigger?: number;
+}
+
+function getRemainingDays(createdAt: Date, validityDays: number): number {
+    const now = new Date();
+    const expirationDate = new Date(createdAt);
+    expirationDate.setDate(expirationDate.getDate() + validityDays);
+    const remainingTime = expirationDate.getTime() - now.getTime();
+    return Math.ceil(remainingTime / (1000 * 60 * 60 * 24));
+}
+
+function KeyValidityStatus({ createdAt, validityDays }: { createdAt: Date, validityDays: number }) {
+    const remainingDays = getRemainingDays(createdAt, validityDays);
+    const isExpired = remainingDays <= 0;
+
+    return (
+        <p className={`text-xs ${isExpired ? 'text-red-500' : 'text-gray-500'}`}>
+            {isExpired
+                ? 'Clé expirée'
+                : `Expire dans ${remainingDays} jour${remainingDays > 1 ? 's' : ''}`
+            }
+        </p>
+    );
 }
 
 export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsListProps) {
@@ -40,6 +62,15 @@ export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsLis
         } catch (error) {
             console.error('Error deleting intervenant:', error);
             // Optionnel : ajouter un état pour gérer l'erreur de suppression
+        }
+    };
+
+    const handleRegenerateKey = async (id: string) => {
+        try {
+            const updatedIntervenant = await regenerateConnectKey(id);
+            fetchIntervenants();
+        } catch (error) {
+            console.error('Error regenerating key:', error);
         }
     };
 
@@ -92,9 +123,24 @@ export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsLis
                             <p className="text-sm text-gray-500 mt-1">
                                 Créé le: {new Date(intervenant.created_at).toLocaleDateString()}
                             </p>
-                            <p className="text-sm font-mono bg-gray-100 p-2 rounded mt-2 break-all">
-                                Clé de connexion: {intervenant.connect_key}
-                            </p>
+                            <div className="mt-2 space-y-2">
+                                <p className="text-sm font-mono bg-gray-100 p-2 rounded break-all">
+                                    Clé de connexion: {intervenant.connect_key}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                    Clé générée le: {new Date(intervenant.connect_key_created_at).toLocaleString()}
+                                </p>
+                                <KeyValidityStatus
+                                    createdAt={new Date(intervenant.connect_key_created_at)}
+                                    validityDays={intervenant.connect_key_validity_days}
+                                />
+                                <button
+                                    onClick={() => handleRegenerateKey(intervenant.id)}
+                                    className="text-sm text-blue-500 hover:text-blue-600"
+                                >
+                                    Régénérer la clé
+                                </button>
+                            </div>
                             <div className="mt-2 flex gap-2">
                                 <button
                                     onClick={() => setEditingIntervenant(intervenant)}

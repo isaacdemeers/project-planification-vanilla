@@ -28,7 +28,8 @@ export default function AddIntervenant({ onIntervenantAdded }: { onIntervenantAd
         lastname: '',
         email: '',
         availabilities: {},
-        connect_key: crypto.randomUUID()
+        connect_key: crypto.randomUUID(),
+        connect_key_validity_days: 30
     });
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
@@ -45,7 +46,8 @@ export default function AddIntervenant({ onIntervenantAdded }: { onIntervenantAd
                 lastname: '',
                 email: '',
                 availabilities: {},
-                connect_key: crypto.randomUUID()
+                connect_key: crypto.randomUUID(),
+                connect_key_validity_days: 30
             });
             onIntervenantAdded();
         } catch (err: any) {
