@@ -1,6 +1,7 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { validateConnectKey } from '@/lib/auth-key';
+import Calendar from '@/components/cal/calendar';
 
 interface PageProps {
     searchParams: Promise<{ key?: string }>;
@@ -30,10 +31,11 @@ export default async function AvailabilityPage({
     }
 
     return (
-        <div className="max-w-2xl mx-auto p-6">
+        <div className="max-w-6xl mx-auto p-6">
             <h1 className="text-2xl font-bold mb-4">
                 Bonjour {result.intervenant.name} {result.intervenant.lastname}
             </h1>
+            <Calendar />
         </div>
     );
 } 
