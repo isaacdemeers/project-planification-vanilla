@@ -1,3 +1,4 @@
+import React from 'react';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import LogoutButton from '@/components/auth/logout-button';
@@ -8,6 +9,7 @@ export default async function DashboardLayout({
     children: React.ReactNode;
 }) {
     const session = await auth();
+
     if (!session) {
         redirect('/login');
     }
