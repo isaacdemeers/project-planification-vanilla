@@ -3,7 +3,11 @@
 import { useState } from 'react';
 import { createIntervenant } from '@/lib/requests';
 
-export default function AddIntervenant() {
+interface AddIntervenantProps {
+    onIntervenantAdded: () => void;
+}
+
+export default function AddIntervenant({ onIntervenantAdded }: AddIntervenantProps) {
     const [formData, setFormData] = useState({
         name: '',
         lastname: '',
@@ -26,6 +30,7 @@ export default function AddIntervenant() {
                 email: '',
                 availabilities: {}
             });
+            onIntervenantAdded();
         } catch (err) {
             setError('Erreur lors de la création de l\'intervenant');
             setSuccess(false);

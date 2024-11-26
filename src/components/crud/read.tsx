@@ -3,7 +3,11 @@
 import { useEffect, useState } from 'react';
 import { getIntervenants, type Intervenant } from '@/lib/requests';
 
-export default function IntervenantsList() {
+interface IntervenantsListProps {
+    refreshTrigger?: number;
+}
+
+export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsListProps) {
     const [intervenants, setIntervenants] = useState<Intervenant[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -22,7 +26,7 @@ export default function IntervenantsList() {
         };
 
         fetchIntervenants();
-    }, []);
+    }, [refreshTrigger]);
 
     if (loading) {
         return <div className="text-center p-4">Chargement...</div>;
