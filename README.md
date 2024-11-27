@@ -18,6 +18,8 @@
 - Added Intervenant key
 - Added Intervenant page
 - Add auth login
+- View availabilities in calendar
+- Week indicator
 
 
 

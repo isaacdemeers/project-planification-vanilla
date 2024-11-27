@@ -60,7 +60,7 @@ export default function Calendar() {
                     headerToolbar={{
                         left: 'prev,next today',
                         center: 'title',
-                        right: 'timeGridWeek,timeGridDay'
+                        right: 'timeGridWeek'
                     }}
                     locale={frLocale}
                     slotMinTime="08:00:00"
