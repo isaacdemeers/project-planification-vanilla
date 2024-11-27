@@ -1,7 +1,7 @@
 # RENDUS
 
 
-## Rendu 1 - Semaine du 11 Novembre
+## Rendu 2 - Semaine du 25 Novembre
 
 #### Links
   - [Branche du rendu](https://github.com/isaacdemeers/sae-501/tree/RENDU1)

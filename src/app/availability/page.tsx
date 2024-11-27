@@ -2,6 +2,7 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import { validateConnectKey } from '@/lib/auth-key';
 import Calendar from '@/components/cal/calendar';
+import EditorWrapper from '@/components/availability/editor-wrapper';
 
 interface PageProps {
     searchParams: Promise<{ key?: string }>;
@@ -35,6 +36,13 @@ export default async function AvailabilityPage({
             <h1 className="text-2xl font-bold mb-4">
                 Bonjour {result.intervenant.name} {result.intervenant.lastname}
             </h1>
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h2 className="text-lg font-semibold mb-2">Vos disponibilités actuelles :</h2>
+                <EditorWrapper
+                    initialValue={result.intervenant.availabilities}
+                    intervenantId={result.intervenant.id}
+                />
+            </div>
             <Calendar />
         </div>
     );

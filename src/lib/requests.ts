@@ -103,3 +103,22 @@ export async function regenerateAllKeys(): Promise<Intervenant[]> {
   return data;
 }
 
+export async function updateAvailabilities(id: string, availabilities: object): Promise<Intervenant> {
+  const response = await fetch(`/api/intervenant/${id}/availabilities`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ availabilities }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error('Server error:', data);
+    throw new Error(data.error || 'Failed to update availabilities');
+  }
+
+  return data;
+}
+
