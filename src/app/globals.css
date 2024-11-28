@@ -34,6 +34,7 @@ body {
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
   }
+
   .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
@@ -66,7 +67,36 @@ body {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+}
+
+
+.fc {
+  color: #475569;
+
+}
+
+.fc-event-main i,
+.fc-event i,
+.fc-event b {
+  color: #ffffff;
+  font-style: normal;
+}
+
+.fc-event b {
+  margin: 0 3px;
+}
+
+.fc-event-main,
+.fc-event {
+  border: none;
+  border-color: transparent;
+  padding: 1px;
+}
+
+.fc-toolbar-title {
+  display: none;
 }

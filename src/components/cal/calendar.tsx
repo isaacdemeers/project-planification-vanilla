@@ -67,39 +67,45 @@ function MonthCalendar({ events }: CalendarProps) {
     const startDate = new Date(academicYear, 8, 1);
     const endDate = new Date(academicYear + 1, 5, 30);
 
-    // Créer un mapping des semaines avec leurs événements
-    const weekEvents = events.reduce((acc: { [key: string]: string }, event: any) => {
-        const eventDate = new Date(event.start);
-        const weekNumber = getWeekNumber(eventDate);
-        const weekKey = `S${weekNumber}`;
+    // Créer un mapping des jours avec leurs événements
+    const dayEvents = events.reduce((acc: { [key: string]: string }, event: any) => {
+        const eventStart = new Date(event.start);
+        // Ajuster la date pour le fuseau horaire local
+        const dateKey = new Date(eventStart.getTime() - eventStart.getTimezoneOffset() * 60000)
+            .toISOString()
+            .split('T')[0];
 
-        // Si l'événement contient "Default", la semaine est bleue
-        // Sinon, la semaine est rouge (événement spécifique)
+        // Si l'événement contient "Default", le jour est bleu
+        // Sinon, le jour est rouge (événement spécifique)
         if (event.title.includes('Default')) {
-            if (!acc[weekKey] || acc[weekKey] === 'white') {
-                acc[weekKey] = 'blue';
+            if (!acc[dateKey] || acc[dateKey] === 'white') {
+                acc[dateKey] = 'blue';
             }
         } else {
-            acc[weekKey] = 'red';
+            acc[dateKey] = 'red';
         }
 
         return acc;
     }, {});
 
-    // Fonction pour colorer les jours de la semaine
+    // Fonction pour colorer les jours
     const dayCellDidMount = (arg: any) => {
         const date = arg.date;
-        const weekNumber = getWeekNumber(date);
-        const weekKey = `S${weekNumber}`;
-
         // Ne pas colorer les weekends
         if (date.getDay() === 0 || date.getDay() === 6) return;
 
-        // Appliquer la couleur selon le statut de la semaine
-        if (weekEvents[weekKey] === 'blue') {
+        // Ajuster la date pour le fuseau horaire local
+        const dateKey = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+            .toISOString()
+            .split('T')[0];
+
+        // Appliquer la couleur selon le statut du jour
+        if (dayEvents[dateKey] === 'blue') {
             arg.el.style.backgroundColor = '#93c5fd50'; // Bleu clair avec transparence
-        } else if (weekEvents[weekKey] === 'red') {
+        } else if (dayEvents[dateKey] === 'red') {
             arg.el.style.backgroundColor = '#fca5a550'; // Rouge clair avec transparence
+        } else {
+            arg.el.style.backgroundColor = '#ffffff'; // Blanc pour les jours sans disponibilité
         }
     };
 
@@ -114,6 +120,7 @@ function MonthCalendar({ events }: CalendarProps) {
                 locale={frLocale}
                 height="auto"
                 weekends={false}
+                firstDay={1}
                 validRange={{
                     start: startDate,
                     end: endDate
