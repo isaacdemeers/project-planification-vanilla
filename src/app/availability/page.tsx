@@ -5,17 +5,13 @@ import { notFound } from 'next/navigation';
 import Calendar, { MonthCalendar } from '@/components/cal/calendar';
 import EditorWrapper from '@/components/availability/editor-wrapper';
 import { convertAvailabilitiesToEvents } from '@/lib/calendar-utils';
+import { useSearchParams } from 'next/navigation';
 
-interface PageProps {
-    searchParams: { key?: string };
-}
-
-export default function AvailabilityPage({
-    searchParams,
-}: PageProps) {
+export default function AvailabilityPage() {
     const [events, setEvents] = useState<any[]>([]);
     const [intervenant, setIntervenant] = useState<any>(null);
-    const key = searchParams.key;
+    const searchParams = useSearchParams();
+    const key = searchParams.get('key');
 
     useEffect(() => {
         async function loadData() {
