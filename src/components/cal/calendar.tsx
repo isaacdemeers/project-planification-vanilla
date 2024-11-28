@@ -67,6 +67,42 @@ function MonthCalendar({ events }: CalendarProps) {
     const startDate = new Date(academicYear, 8, 1);
     const endDate = new Date(academicYear + 1, 5, 30);
 
+    // Créer un mapping des semaines avec leurs événements
+    const weekEvents = events.reduce((acc: { [key: string]: string }, event: any) => {
+        const eventDate = new Date(event.start);
+        const weekNumber = getWeekNumber(eventDate);
+        const weekKey = `S${weekNumber}`;
+
+        // Si l'événement contient "Default", la semaine est bleue
+        // Sinon, la semaine est rouge (événement spécifique)
+        if (event.title.includes('Default')) {
+            if (!acc[weekKey] || acc[weekKey] === 'white') {
+                acc[weekKey] = 'blue';
+            }
+        } else {
+            acc[weekKey] = 'red';
+        }
+
+        return acc;
+    }, {});
+
+    // Fonction pour colorer les jours de la semaine
+    const dayCellDidMount = (arg: any) => {
+        const date = arg.date;
+        const weekNumber = getWeekNumber(date);
+        const weekKey = `S${weekNumber}`;
+
+        // Ne pas colorer les weekends
+        if (date.getDay() === 0 || date.getDay() === 6) return;
+
+        // Appliquer la couleur selon le statut de la semaine
+        if (weekEvents[weekKey] === 'blue') {
+            arg.el.style.backgroundColor = '#93c5fd50'; // Bleu clair avec transparence
+        } else if (weekEvents[weekKey] === 'red') {
+            arg.el.style.backgroundColor = '#fca5a550'; // Rouge clair avec transparence
+        }
+    };
+
     return (
         <div className="mt-8 bg-white p-4 rounded-lg shadow">
             <FullCalendar
@@ -77,7 +113,6 @@ function MonthCalendar({ events }: CalendarProps) {
                 headerToolbar={false}
                 locale={frLocale}
                 height="auto"
-                events={events}
                 weekends={false}
                 validRange={{
                     start: startDate,
@@ -88,6 +123,7 @@ function MonthCalendar({ events }: CalendarProps) {
                         duration: { months: 10 }
                     }
                 }}
+                dayCellDidMount={dayCellDidMount}
             />
         </div>
     );
