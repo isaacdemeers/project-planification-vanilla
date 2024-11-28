@@ -5,10 +5,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import frLocale from '@fullcalendar/core/locales/fr';
-import { useSearchParams } from 'next/navigation';
-import { convertAvailabilitiesToEvents } from '@/lib/calendar-utils';
-import multiMonthPlugin from '@fullcalendar/multimonth'
-
+import multiMonthPlugin from '@fullcalendar/multimonth';
 
 function getWeekNumber(date: Date): number {
     const d = new Date(date);
@@ -19,31 +16,12 @@ function getWeekNumber(date: Date): number {
     return weekNumber;
 }
 
-export default function Calendar() {
-    const [events, setEvents] = useState<any[]>([]);
+interface CalendarProps {
+    events: any[];
+}
+
+function WeekCalendar({ events }: CalendarProps) {
     const [currentWeek, setCurrentWeek] = useState<number>(getWeekNumber(new Date()));
-    const searchParams = useSearchParams();
-    const key = searchParams.get('key');
-
-    useEffect(() => {
-        const fetchAvailabilities = async () => {
-            if (!key) return;
-
-            try {
-                const response = await fetch(`/api/intervenant/${key}/availabilities`);
-                const data = await response.json();
-
-                if (data.availabilities) {
-                    const calendarEvents = convertAvailabilitiesToEvents(data.availabilities);
-                    setEvents(calendarEvents);
-                }
-            } catch (error) {
-                console.error('Error fetching availabilities:', error);
-            }
-        };
-
-        fetchAvailabilities();
-    }, [key]);
 
     const handleDatesSet = useCallback((dateInfo: any) => {
         const weekNumber = getWeekNumber(dateInfo.start);
@@ -78,18 +56,16 @@ export default function Calendar() {
     );
 }
 
-
-export function MonthCalendar({ events }: { events: any[] }) {
+function MonthCalendar({ events }: CalendarProps) {
     const currentDate = new Date();
     let academicYear = currentDate.getFullYear();
 
-    // Si on est avant septembre, on est dans l'année académique précédente
-    if (currentDate.getMonth() < 8) { // 8 = septembre (0-based)
+    if (currentDate.getMonth() < 8) {
         academicYear--;
     }
 
-    const startDate = new Date(academicYear, 8, 1); // 1er septembre
-    const endDate = new Date(academicYear + 1, 5, 30); // 30 juin
+    const startDate = new Date(academicYear, 8, 1);
+    const endDate = new Date(academicYear + 1, 5, 30);
 
     return (
         <div className="mt-8 bg-white p-4 rounded-lg shadow">
@@ -109,10 +85,12 @@ export function MonthCalendar({ events }: { events: any[] }) {
                 }}
                 views={{
                     multiMonthYear: {
-                        duration: { months: 10 } // De septembre à juin = 10 mois
+                        duration: { months: 10 }
                     }
                 }}
             />
         </div>
     );
 }
+
+export { WeekCalendar as default, MonthCalendar };

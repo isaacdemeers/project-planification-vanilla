@@ -13,9 +13,7 @@ export async function GET(
             return NextResponse.json({ error: result.code }, { status: 401 });
         }
 
-        return NextResponse.json({
-            availabilities: result.intervenant.availabilities
-        });
+        return NextResponse.json(result.intervenant);
     } catch (error) {
         console.error('Error fetching availabilities:', error);
         return NextResponse.json(
@@ -30,8 +28,13 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const id = params.id;
+        const key = params.id;
         const { availabilities } = await request.json();
+
+        const validationResult = await validateConnectKey(key);
+        if (validationResult.type === 'error') {
+            return NextResponse.json({ error: validationResult.code }, { status: 401 });
+        }
 
         const client = await db.connect();
         try {
@@ -40,7 +43,7 @@ export async function PUT(
                  SET availabilities = $1
                  WHERE id = $2
                  RETURNING *`,
-                [availabilities, id]
+                [availabilities, validationResult.intervenant.id]
             );
 
             if (result.rowCount === 0) {

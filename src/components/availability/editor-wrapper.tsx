@@ -11,7 +11,11 @@ interface EditorWrapperProps {
 
 export default function EditorWrapper({ initialValue, intervenantId }: EditorWrapperProps) {
     const handleSave = async (newValue: object) => {
-        await updateAvailabilities(intervenantId, newValue);
+        try {
+            await updateAvailabilities(intervenantId, newValue);
+        } catch (error) {
+            console.error('Error saving availabilities:', error);
+        }
     };
 
     return (
