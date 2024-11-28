@@ -7,6 +7,8 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import frLocale from '@fullcalendar/core/locales/fr';
 import { useSearchParams } from 'next/navigation';
 import { convertAvailabilitiesToEvents } from '@/lib/calendar-utils';
+import multiMonthPlugin from '@fullcalendar/multimonth'
+
 
 function getWeekNumber(date: Date): number {
     const d = new Date(date);
@@ -72,6 +74,45 @@ export default function Calendar() {
                     datesSet={handleDatesSet}
                 />
             </div>
+        </div>
+    );
+}
+
+
+export function MonthCalendar({ events }: { events: any[] }) {
+    const currentDate = new Date();
+    let academicYear = currentDate.getFullYear();
+
+    // Si on est avant septembre, on est dans l'année académique précédente
+    if (currentDate.getMonth() < 8) { // 8 = septembre (0-based)
+        academicYear--;
+    }
+
+    const startDate = new Date(academicYear, 8, 1); // 1er septembre
+    const endDate = new Date(academicYear + 1, 5, 30); // 30 juin
+
+    return (
+        <div className="mt-8 bg-white p-4 rounded-lg shadow">
+            <FullCalendar
+                plugins={[multiMonthPlugin, dayGridPlugin]}
+                initialView="multiMonthYear"
+                initialDate={startDate}
+                multiMonthMaxColumns={1}
+                headerToolbar={false}
+                locale={frLocale}
+                height="auto"
+                events={events}
+                weekends={false}
+                validRange={{
+                    start: startDate,
+                    end: endDate
+                }}
+                views={{
+                    multiMonthYear: {
+                        duration: { months: 10 } // De septembre à juin = 10 mois
+                    }
+                }}
+            />
         </div>
     );
 }

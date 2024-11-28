@@ -1,7 +1,7 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { validateConnectKey } from '@/lib/auth-key';
-import Calendar from '@/components/cal/calendar';
+import Calendar, { MonthCalendar } from '@/components/cal/calendar';
 import EditorWrapper from '@/components/availability/editor-wrapper';
 
 interface PageProps {
@@ -44,6 +44,8 @@ export default async function AvailabilityPage({
                 />
             </div>
             <Calendar />
+
+            <MonthCalendar events={[]} />
         </div>
     );
 } 
