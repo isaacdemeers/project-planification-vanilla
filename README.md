@@ -10,17 +10,17 @@
 [ITERATION 12]
 
 ##### Updated 
-- Switch from prisma to vanilla sql
+- Passer de prisma à vanilla sql
 
 ##### Added
-- Add the calendar
-- Add the availability page
-- Add, edit, delete Intervenant
-- Added Intervenant key
-- Added Intervenant page
-- Add auth login
-- View availabilities in calendar
-- Week indicator
+- Ajouter le calendrier
+- Ajouter la page de disponibilité
+- Ajouter, modifier, supprimer Intervenant
+- Ajout d'une clé d'intervention
+- Ajout d'une page Intervenant
+- Ajout d'un login d'authentification
+- Voir les disponibilités dans le calendrier
+- Indicateur de semaine
 
 
 
