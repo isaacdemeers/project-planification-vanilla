@@ -3,7 +3,7 @@
 ## Rendu 2 - Semaine du 25 Novembre
 
 #### Links
-  - [Branche du rendu](https://github.com/isaacdemeers/sae-501/tree/RENDU2)
+  - [Branche du rendu](https://github.com/isaacdemeers/project-planification-vanilla/tree/RENDU2)
  
 #### Changelog
 
