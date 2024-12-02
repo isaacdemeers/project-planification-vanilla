@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { validateAndCleanAvailabilities } from '@/lib/calendar-utils';
 
 interface JsonEditorProps {
     initialValue: object;
@@ -19,11 +20,12 @@ export default function JsonEditor({ initialValue, onSave }: JsonEditorProps) {
     const handleSave = async () => {
         try {
             const parsedJson = JSON.parse(jsonText);
-            await onSave(parsedJson);
+            const validatedJson = validateAndCleanAvailabilities(parsedJson);
+            await onSave(validatedJson);
             setIsEditing(false);
             setError(null);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Invalid JSON format');
+            setError(err instanceof Error ? err.message : 'Format JSON invalide');
         }
     };
 

@@ -8,6 +8,56 @@ export type AvailabilityPeriod = {
     [key: string]: Availability[];
 } | Record<string, never>;
 
+// Validation des horaires au format HH:mm
+function isValidTimeFormat(time: string): boolean {
+    const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
+    return timeRegex.test(time);
+}
+
+// Validation des jours de la semaine
+function isValidDays(days: string): boolean {
+    const validDays = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+    const daysList = days.split(',').map(day => day.trim().toLowerCase());
+    return daysList.every(day => validDays.includes(day));
+}
+
+// Validation d'une disponibilité individuelle
+function isValidAvailability(availability: any): availability is Availability {
+    if (!availability || typeof availability !== 'object') return false;
+
+    return (
+        typeof availability.days === 'string' &&
+        typeof availability.from === 'string' &&
+        typeof availability.to === 'string' &&
+        isValidDays(availability.days) &&
+        isValidTimeFormat(availability.from) &&
+        isValidTimeFormat(availability.to)
+    );
+}
+
+// Validation d'une période de disponibilité
+function isValidAvailabilityPeriod(period: any): period is AvailabilityPeriod {
+    if (!period || typeof period !== 'object') return false;
+
+    // Vérifier chaque clé du period
+    return Object.entries(period).every(([key, value]) => {
+        // Vérifier que la clé est soit 'default' soit commence par 'S' suivi d'un nombre
+        if (key !== 'default' && !/^S\d+$/.test(key)) return false;
+
+        // Vérifier que la valeur est un tableau de disponibilités valides
+        return Array.isArray(value) && value.every(isValidAvailability);
+    });
+}
+
+// Fonction pour valider et nettoyer les disponibilités
+export function validateAndCleanAvailabilities(availabilities: any): AvailabilityPeriod {
+    if (!isValidAvailabilityPeriod(availabilities)) {
+        console.error('Invalid availability format:', availabilities);
+        throw new Error('Format des disponibilités invalide');
+    }
+    return availabilities;
+}
+
 const DAYS_MAP: { [key: string]: number } = {
     'lundi': 0,
     'mardi': 1,

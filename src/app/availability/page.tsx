@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import Calendar, { MonthCalendar } from '@/components/cal/calendar';
 import type { WeekCalendarRef } from '@/components/cal/calendar';
 import EditorWrapper from '@/components/availability/editor-wrapper';
-import { convertAvailabilitiesToEvents, type AvailabilityPeriod } from '@/lib/calendar-utils';
+import { convertAvailabilitiesToEvents, validateAndCleanAvailabilities, type AvailabilityPeriod } from '@/lib/calendar-utils';
 import { useSearchParams } from 'next/navigation';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { updateAvailabilities } from '@/lib/requests';
@@ -103,12 +103,14 @@ export default function AvailabilityPage() {
 
         try {
             const newAvailabilities = updateFn(intervenant.availabilities);
-            const updatedIntervenant = await updateAvailabilities(key, newAvailabilities);
+            const validatedAvailabilities = validateAndCleanAvailabilities(newAvailabilities);
+            const updatedIntervenant = await updateAvailabilities(key, validatedAvailabilities);
             setIntervenant(updatedIntervenant);
             const calendarEvents = convertAvailabilitiesToEvents(updatedIntervenant.availabilities as AvailabilityPeriod);
             setEvents(calendarEvents);
         } catch (error) {
             console.error('Error updating availabilities:', error);
+            alert(error instanceof Error ? error.message : 'Erreur lors de la mise à jour des disponibilités');
         }
     }, [key, intervenant]);
 
