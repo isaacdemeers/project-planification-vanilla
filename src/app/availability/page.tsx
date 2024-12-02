@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { notFound } from 'next/navigation';
 import Calendar, { MonthCalendar } from '@/components/cal/calendar';
 import EditorWrapper from '@/components/availability/editor-wrapper';
 import { convertAvailabilitiesToEvents } from '@/lib/calendar-utils';
 import { useSearchParams } from 'next/navigation';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { updateAvailabilities } from '@/lib/requests';
 
 function ExpiredKeyMessage() {
     return (
@@ -39,6 +40,20 @@ export default function AvailabilityPage() {
     const [error, setError] = useState<string | null>(null);
     const searchParams = useSearchParams();
     const key = searchParams.get('key');
+
+    const handleAvailabilityChange = useCallback(async (updateFn: (prev: any) => any) => {
+        if (!key || !intervenant) return;
+
+        try {
+            const newAvailabilities = updateFn(intervenant.availabilities);
+            const updatedIntervenant = await updateAvailabilities(key, newAvailabilities);
+            setIntervenant(updatedIntervenant);
+            const calendarEvents = convertAvailabilitiesToEvents(updatedIntervenant.availabilities);
+            setEvents(calendarEvents);
+        } catch (error) {
+            console.error('Error updating availabilities:', error);
+        }
+    }, [key, intervenant]);
 
     useEffect(() => {
         async function loadData() {
@@ -104,7 +119,10 @@ export default function AvailabilityPage() {
                         intervenantId={key}
                     />
                 </div>
-                <Calendar events={events} />
+                <Calendar
+                    events={events}
+                    onAvailabilityChange={handleAvailabilityChange}
+                />
             </div>
         </div>
     );
