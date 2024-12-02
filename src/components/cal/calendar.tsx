@@ -53,12 +53,22 @@ function getWeekNumber(date: Date): number {
 interface CalendarProps {
     events: any[];
     onAvailabilityChange?: (updateFn: (prev: any) => any) => void;
+    displayMode?: 'default' | 'specific' | 'all';
 }
 
-function WeekCalendar({ events, onAvailabilityChange }: CalendarProps) {
+function WeekCalendar({ events, onAvailabilityChange, displayMode = 'all' }: CalendarProps) {
     const [currentWeek, setCurrentWeek] = useState<number>(getWeekNumber(new Date()));
     const [selectedEvent, setSelectedEvent] = useState<any>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+    const filteredEvents = events.filter(event => {
+        if (displayMode === 'all') return true;
+        if (displayMode === 'default') {
+            return event.title.includes('Default');
+        } else {
+            return !event.title.includes('Default');
+        }
+    });
 
     const handleDatesSet = useCallback((dateInfo: any) => {
         const weekNumber = getWeekNumber(dateInfo.start);
@@ -75,7 +85,7 @@ function WeekCalendar({ events, onAvailabilityChange }: CalendarProps) {
 
         const eventDate = new Date(selectedEvent.start);
         const weekNumber = getWeekNumber(eventDate);
-        const weekKey = `S${weekNumber}`;
+        const weekKey = selectedEvent.title.includes('Default') ? 'default' : `S${weekNumber}`;
 
         onAvailabilityChange((prevAvailabilities: any) => {
             const updatedAvailabilities = { ...prevAvailabilities };
@@ -106,12 +116,12 @@ function WeekCalendar({ events, onAvailabilityChange }: CalendarProps) {
     }, [onAvailabilityChange, selectedEvent]);
 
     const handleSelect = useCallback((selectInfo: any) => {
-        if (!onAvailabilityChange) return;
+        if (!onAvailabilityChange || displayMode === 'all') return;
 
         const startDate = new Date(selectInfo.start);
         const endDate = new Date(selectInfo.end);
         const weekNumber = getWeekNumber(startDate);
-        const weekKey = `S${weekNumber}`;
+        const weekKey = displayMode === 'default' ? 'default' : `S${weekNumber}`;
 
         const from = startDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         const to = endDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -138,13 +148,25 @@ function WeekCalendar({ events, onAvailabilityChange }: CalendarProps) {
         });
 
         selectInfo.view.calendar.unselect();
-    }, [onAvailabilityChange]);
+    }, [onAvailabilityChange, displayMode]);
 
     return (
         <>
             <div className="space-y-2">
                 <div className="bg-blue-100 p-2 rounded text-center">
-                    Semaine {currentWeek}
+                    <div>Semaine {currentWeek}</div>
+                    <div className="text-sm text-gray-600">
+                        Mode: {
+                            displayMode === 'default' ? 'Par défaut' :
+                                displayMode === 'specific' ? 'Spécifique' :
+                                    'Tous les événements'
+                        }
+                    </div>
+                    {displayMode === 'all' && (
+                        <div className="text-xs text-orange-600 mt-1">
+                            Sélectionnez le mode "Par défaut" ou "Spécifique" pour ajouter des disponibilités
+                        </div>
+                    )}
                 </div>
                 <div className="h-[600px] bg-white p-4 rounded-lg shadow">
                     <FullCalendar
@@ -160,10 +182,10 @@ function WeekCalendar({ events, onAvailabilityChange }: CalendarProps) {
                         slotMaxTime="19:30:00"
                         allDaySlot={false}
                         weekends={false}
-                        events={events}
+                        events={filteredEvents}
                         height="100%"
                         datesSet={handleDatesSet}
-                        selectable={true}
+                        selectable={displayMode !== 'all'}
                         select={handleSelect}
                         selectMirror={true}
                         eventClick={handleEventClick}
@@ -186,7 +208,7 @@ function WeekCalendar({ events, onAvailabilityChange }: CalendarProps) {
     );
 }
 
-function MonthCalendar({ events }: CalendarProps) {
+function MonthCalendar({ events, displayMode = 'all' }: CalendarProps) {
     const currentDate = new Date();
     let academicYear = currentDate.getFullYear();
 
@@ -197,8 +219,17 @@ function MonthCalendar({ events }: CalendarProps) {
     const startDate = new Date(academicYear, 8, 1);
     const endDate = new Date(academicYear + 1, 5, 30);
 
+    const filteredEvents = events.filter(event => {
+        if (displayMode === 'all') return true;
+        if (displayMode === 'default') {
+            return event.title.includes('Default');
+        } else {
+            return !event.title.includes('Default');
+        }
+    });
+
     // Créer un mapping des jours avec leurs événements
-    const dayEvents = events.reduce((acc: { [key: string]: string }, event: any) => {
+    const dayEvents = filteredEvents.reduce((acc: { [key: string]: string }, event: any) => {
         const eventStart = new Date(event.start);
         // Ajuster la date pour le fuseau horaire local
         const dateKey = new Date(eventStart.getTime() - eventStart.getTimezoneOffset() * 60000)
@@ -240,7 +271,7 @@ function MonthCalendar({ events }: CalendarProps) {
     };
 
     return (
-        <div className="mt-8 bg-white p-4 rounded-lg shadow">
+        <div className="p-4">
             <FullCalendar
                 plugins={[multiMonthPlugin, dayGridPlugin]}
                 initialView="multiMonthYear"
@@ -261,6 +292,8 @@ function MonthCalendar({ events }: CalendarProps) {
                     }
                 }}
                 dayCellDidMount={dayCellDidMount}
+                contentHeight="auto"
+                handleWindowResize={true}
             />
         </div>
     );
