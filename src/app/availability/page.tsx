@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { notFound } from 'next/navigation';
 import Calendar, { MonthCalendar } from '@/components/cal/calendar';
+import type { WeekCalendarRef } from '@/components/cal/calendar';
 import EditorWrapper from '@/components/availability/editor-wrapper';
 import { convertAvailabilitiesToEvents, type AvailabilityPeriod } from '@/lib/calendar-utils';
 import { useSearchParams } from 'next/navigation';
@@ -87,8 +88,15 @@ export default function AvailabilityPage() {
     const [error, setError] = useState<string | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [displayMode, setDisplayMode] = useState<'default' | 'specific' | 'all'>('all');
+    const weekCalendarRef = useRef<WeekCalendarRef>(null);
     const searchParams = useSearchParams();
     const key = searchParams.get('key');
+
+    const handleDateSelect = useCallback((date: Date) => {
+        if (weekCalendarRef.current?.goToDate) {
+            weekCalendarRef.current.goToDate(date);
+        }
+    }, []);
 
     const handleAvailabilityChange = useCallback(async (updateFn: (prev: any) => any) => {
         if (!key || !intervenant) return;
@@ -148,7 +156,11 @@ export default function AvailabilityPage() {
             {/* Sidebar */}
             <div className={`relative ${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 ease-in-out overflow-hidden bg-white border-r`}>
                 <div className="h-full overflow-y-auto">
-                    <MonthCalendar events={events} displayMode={displayMode} />
+                    <MonthCalendar
+                        events={events}
+                        displayMode={displayMode}
+                        onDateSelect={handleDateSelect}
+                    />
                 </div>
             </div>
 
@@ -213,6 +225,7 @@ export default function AvailabilityPage() {
                     />
                 </div>
                 <Calendar
+                    ref={weekCalendarRef}
                     events={events}
                     onAvailabilityChange={handleAvailabilityChange}
                     displayMode={displayMode}

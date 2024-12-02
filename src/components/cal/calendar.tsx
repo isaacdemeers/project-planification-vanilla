@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -54,12 +54,33 @@ interface CalendarProps {
     events: any[];
     onAvailabilityChange?: (updateFn: (prev: any) => any) => void;
     displayMode?: 'default' | 'specific' | 'all';
+    onDateSelect?: (date: Date) => void;
 }
 
-function WeekCalendar({ events, onAvailabilityChange, displayMode = 'all' }: CalendarProps) {
+export interface WeekCalendarRef {
+    goToDate: (date: Date) => void;
+}
+
+const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
+    events,
+    onAvailabilityChange,
+    displayMode = 'all'
+}, ref) => {
     const [currentWeek, setCurrentWeek] = useState<number>(getWeekNumber(new Date()));
     const [selectedEvent, setSelectedEvent] = useState<any>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const calendarRef = useRef<any>(null);
+
+    const goToDate = useCallback((date: Date) => {
+        if (calendarRef.current) {
+            const calendar = calendarRef.current.getApi();
+            calendar.gotoDate(date);
+        }
+    }, []);
+
+    useImperativeHandle(ref, () => ({
+        goToDate
+    }));
 
     const filteredEvents = events.filter(event => {
         if (displayMode === 'all') return true;
@@ -170,6 +191,7 @@ function WeekCalendar({ events, onAvailabilityChange, displayMode = 'all' }: Cal
                 </div>
                 <div className="h-[600px] bg-white p-4 rounded-lg shadow">
                     <FullCalendar
+                        ref={calendarRef}
                         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                         initialView="timeGridWeek"
                         headerToolbar={{
@@ -206,9 +228,9 @@ function WeekCalendar({ events, onAvailabilityChange, displayMode = 'all' }: Cal
             />
         </>
     );
-}
+});
 
-function MonthCalendar({ events, displayMode = 'all' }: CalendarProps) {
+function MonthCalendar({ events, displayMode = 'all', onDateSelect }: CalendarProps) {
     const currentDate = new Date();
     let academicYear = currentDate.getFullYear();
 
@@ -228,16 +250,12 @@ function MonthCalendar({ events, displayMode = 'all' }: CalendarProps) {
         }
     });
 
-    // Créer un mapping des jours avec leurs événements
     const dayEvents = filteredEvents.reduce((acc: { [key: string]: string }, event: any) => {
         const eventStart = new Date(event.start);
-        // Ajuster la date pour le fuseau horaire local
         const dateKey = new Date(eventStart.getTime() - eventStart.getTimezoneOffset() * 60000)
             .toISOString()
             .split('T')[0];
 
-        // Si l'événement contient "Default", le jour est bleu
-        // Sinon, le jour est rouge (événement spécifique)
         if (event.title.includes('Default')) {
             if (!acc[dateKey] || acc[dateKey] === 'white') {
                 acc[dateKey] = 'blue';
@@ -249,31 +267,35 @@ function MonthCalendar({ events, displayMode = 'all' }: CalendarProps) {
         return acc;
     }, {});
 
-    // Fonction pour colorer les jours
-    const dayCellDidMount = (arg: any) => {
+    const handleDateClick = useCallback((arg: any) => {
+        if (onDateSelect) {
+            onDateSelect(arg.date);
+        }
+    }, [onDateSelect]);
+
+    const dayCellDidMount = useCallback((arg: any) => {
         const date = arg.date;
-        // Ne pas colorer les weekends
         if (date.getDay() === 0 || date.getDay() === 6) return;
 
-        // Ajuster la date pour le fuseau horaire local
         const dateKey = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
             .toISOString()
             .split('T')[0];
 
-        // Appliquer la couleur selon le statut du jour
         if (dayEvents[dateKey] === 'blue') {
-            arg.el.style.backgroundColor = '#93c5fd50'; // Bleu clair avec transparence
+            arg.el.style.backgroundColor = '#93c5fd50';
         } else if (dayEvents[dateKey] === 'red') {
-            arg.el.style.backgroundColor = '#fca5a550'; // Rouge clair avec transparence
+            arg.el.style.backgroundColor = '#fca5a550';
         } else {
-            arg.el.style.backgroundColor = '#ffffff'; // Blanc pour les jours sans disponibilité
+            arg.el.style.backgroundColor = '#ffffff';
         }
-    };
+
+        arg.el.style.cursor = 'pointer';
+    }, [dayEvents]);
 
     return (
         <div className="p-4">
             <FullCalendar
-                plugins={[multiMonthPlugin, dayGridPlugin]}
+                plugins={[multiMonthPlugin, dayGridPlugin, interactionPlugin]}
                 initialView="multiMonthYear"
                 initialDate={startDate}
                 multiMonthMaxColumns={1}
@@ -292,6 +314,7 @@ function MonthCalendar({ events, displayMode = 'all' }: CalendarProps) {
                     }
                 }}
                 dayCellDidMount={dayCellDidMount}
+                dateClick={handleDateClick}
                 contentHeight="auto"
                 handleWindowResize={true}
             />
