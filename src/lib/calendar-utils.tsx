@@ -159,17 +159,8 @@ export function convertAvailabilitiesToEvents(availabilities: AvailabilityPeriod
         const weekNumber = getWeekNumber(weekDate);
         const weekKey = `S${weekNumber}`;
 
-        // Vérifier les disponibilités spécifiques pour cette semaine
-        if (availabilities[weekKey]) {
-            availabilities[weekKey].forEach(slot => {
-                events.push(...createEventForSlot(
-                    slot,
-                    weekDate,
-                    `${weekKey} - Disponible`,
-                    '#60a5fa'
-                ));
-            });
-        } else if (availabilities['default']) {
+        // Toujours ajouter les événements par défaut
+        if (availabilities['default']) {
             availabilities['default'].forEach(slot => {
                 events.push(...createEventForSlot(
                     slot,
@@ -179,7 +170,22 @@ export function convertAvailabilitiesToEvents(availabilities: AvailabilityPeriod
                 ));
             });
         }
+
+        // Ajouter les événements spécifiques s'ils existent pour cette semaine
+        if (availabilities[weekKey]) {
+            availabilities[weekKey].forEach(slot => {
+                events.push(...createEventForSlot(
+                    slot,
+                    weekDate,
+                    `${weekKey} - Disponible`,
+                    '#60a5fa'
+                ));
+            });
+        }
     }
 
+    // Trier les événements par date
+    events.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+
     return events;
-} 
+}

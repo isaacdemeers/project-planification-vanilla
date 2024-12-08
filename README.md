@@ -22,5 +22,20 @@
 - Voir les disponibilités dans le calendrier
 - Indicateur de semaine
 
+## Rendu 3 - Semaine du 02 Décembre
+
+#### Links
+  - [Branche du rendu](https://github.com/isaacdemeers/project-planification-vanilla/tree/RENDU3)
+ 
+#### Changelog
+
+[ITERATION 16]
+
+##### Added
+- Supprimer une intervention par un click
+- visualisation des disponibilités dans le calendrier par type ( a revoir )
+- possibilité de de se rendre sur le vue semaine via un click dans la vue Mois
+- vue des disponibilités dans le dashboard (non terminé)
+
 
 
