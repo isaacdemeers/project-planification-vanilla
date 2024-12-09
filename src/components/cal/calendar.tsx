@@ -101,39 +101,44 @@ export const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
         setIsDeleteModalOpen(true);
     }, []);
 
-    const handleDeleteEvent = useCallback(() => {
+    const handleDeleteEvent = useCallback(async () => {
         if (!onAvailabilityChange || !selectedEvent) return;
 
-        const eventDate = new Date(selectedEvent.start);
-        const weekNumber = getWeekNumber(eventDate);
-        const weekKey = selectedEvent.title.includes('Default') ? 'default' : `S${weekNumber}`;
+        try {
+            const eventDate = new Date(selectedEvent.start);
+            const weekNumber = getWeekNumber(eventDate);
+            const weekKey = selectedEvent.title.includes('Default') ? 'default' : `S${weekNumber}`;
 
-        onAvailabilityChange((prevAvailabilities: any) => {
-            const updatedAvailabilities = { ...prevAvailabilities };
+            await onAvailabilityChange((prevAvailabilities: any) => {
+                const updatedAvailabilities = { ...prevAvailabilities };
 
-            if (updatedAvailabilities[weekKey]) {
-                const eventTime = {
-                    from: eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-                    to: new Date(selectedEvent.end).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-                    days: ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'][eventDate.getDay()]
-                };
+                if (updatedAvailabilities[weekKey]) {
+                    const eventTime = {
+                        from: eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+                        to: new Date(selectedEvent.end).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+                        days: ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'][eventDate.getDay()]
+                    };
 
-                updatedAvailabilities[weekKey] = updatedAvailabilities[weekKey].filter((slot: any) =>
-                    !(slot.from === eventTime.from &&
-                        slot.to === eventTime.to &&
-                        slot.days === eventTime.days)
-                );
+                    updatedAvailabilities[weekKey] = updatedAvailabilities[weekKey].filter((slot: any) =>
+                        !(slot.from === eventTime.from &&
+                            slot.to === eventTime.to &&
+                            slot.days === eventTime.days)
+                    );
 
-                if (updatedAvailabilities[weekKey].length === 0) {
-                    delete updatedAvailabilities[weekKey];
+                    if (updatedAvailabilities[weekKey].length === 0) {
+                        delete updatedAvailabilities[weekKey];
+                    }
                 }
-            }
 
-            return updatedAvailabilities;
-        });
+                return updatedAvailabilities;
+            });
 
-        setIsDeleteModalOpen(false);
-        setSelectedEvent(null);
+            setIsDeleteModalOpen(false);
+            setSelectedEvent(null);
+        } catch (error) {
+            console.error('Erreur lors de la suppression de la disponibilité:', error);
+            alert('Erreur lors de la suppression de la disponibilité');
+        }
     }, [onAvailabilityChange, selectedEvent]);
 
     const handleSelect = useCallback((selectInfo: any) => {
