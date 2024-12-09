@@ -61,7 +61,7 @@ export interface WeekCalendarRef {
     goToDate: (date: Date) => void;
 }
 
-const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
+export const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
     events,
     onAvailabilityChange,
     displayMode = 'all'
