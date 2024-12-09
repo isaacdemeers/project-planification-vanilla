@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -64,9 +64,9 @@ export interface WeekCalendarRef {
 export const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
     events,
     onAvailabilityChange,
-    displayMode = 'all'
 }, ref) => {
     const [currentWeek, setCurrentWeek] = useState<number>(getWeekNumber(new Date()));
+    const [currentMonth, setCurrentMonth] = useState<string>('');
     const [selectedEvent, setSelectedEvent] = useState<any>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const calendarRef = useRef<any>(null);
@@ -82,19 +82,31 @@ export const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
         goToDate
     }));
 
-    const filteredEvents = events.filter(event => {
-        if (displayMode === 'all') return true;
-        if (displayMode === 'default') {
-            return event.title.includes('Default');
-        } else {
-            return !event.title.includes('Default');
-        }
-    });
-
     const handleDatesSet = useCallback((dateInfo: any) => {
         const weekNumber = getWeekNumber(dateInfo.start);
         setCurrentWeek(weekNumber);
+        const month = dateInfo.start.toLocaleString('fr-FR', { month: 'long' });
+        setCurrentMonth(month);
     }, []);
+
+    const filteredEvents = useMemo(() => {
+        const weekKey = `S${currentWeek}`;
+        const hasSpecificAvailabilities = events.some(event =>
+            !event.title.includes('Default') &&
+            getWeekNumber(new Date(event.start)) === currentWeek
+        );
+
+        return events.filter(event => {
+            const eventWeek = getWeekNumber(new Date(event.start));
+            const isDefaultEvent = event.title.includes('Default');
+            const isCurrentWeekEvent = eventWeek === currentWeek;
+
+            if (isCurrentWeekEvent) {
+                return hasSpecificAvailabilities ? !isDefaultEvent : true;
+            }
+            return true;
+        });
+    }, [events, currentWeek]);
 
     const handleEventClick = useCallback((clickInfo: any) => {
         setSelectedEvent(clickInfo.event);
@@ -142,15 +154,14 @@ export const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
     }, [onAvailabilityChange, selectedEvent]);
 
     const handleSelect = useCallback((selectInfo: any) => {
-        if (!onAvailabilityChange || displayMode === 'all') return;
+        if (!onAvailabilityChange) return;
 
         const startDate = new Date(selectInfo.start);
-        const endDate = new Date(selectInfo.end);
         const weekNumber = getWeekNumber(startDate);
-        const weekKey = displayMode === 'default' ? 'default' : `S${weekNumber}`;
+        const weekKey = `S${weekNumber}`;
 
         const from = startDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-        const to = endDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const to = new Date(selectInfo.end).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
         const dayNames = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
         const day = dayNames[startDate.getDay()];
@@ -174,25 +185,14 @@ export const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
         });
 
         selectInfo.view.calendar.unselect();
-    }, [onAvailabilityChange, displayMode]);
+    }, [onAvailabilityChange]);
 
     return (
         <>
             <div className="space-y-2">
                 <div className="bg-blue-100 p-2 rounded text-center">
-                    <div>Semaine {currentWeek}</div>
-                    <div className="text-sm text-gray-600">
-                        Mode: {
-                            displayMode === 'default' ? 'Par défaut' :
-                                displayMode === 'specific' ? 'Spécifique' :
-                                    'Tous les événements'
-                        }
-                    </div>
-                    {displayMode === 'all' && (
-                        <div className="text-xs text-orange-600 mt-1">
-                            Sélectionnez le mode "Par défaut" ou "Spécifique" pour ajouter des disponibilités
-                        </div>
-                    )}
+                    <div className="font-semibold">Semaine {currentWeek}</div>
+                    <div className="text-sm text-gray-600 capitalize">{currentMonth}</div>
                 </div>
                 <div className="h-[600px] bg-white p-4 rounded-lg shadow">
                     <FullCalendar
@@ -212,7 +212,7 @@ export const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
                         events={filteredEvents}
                         height="100%"
                         datesSet={handleDatesSet}
-                        selectable={displayMode !== 'all'}
+                        selectable={true}
                         select={handleSelect}
                         selectMirror={true}
                         eventClick={handleEventClick}

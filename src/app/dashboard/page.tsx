@@ -185,43 +185,12 @@ function AvailabilityManager() {
                         <h3 className="text-lg font-semibold">
                             Disponibilités de {selectedIntervenant.name} {selectedIntervenant.lastname}
                         </h3>
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-                                <button
-                                    onClick={() => setDisplayMode('all')}
-                                    className={`px-3 py-1 rounded-lg transition-colors ${displayMode === 'all'
-                                        ? 'bg-white text-blue-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-800'
-                                        }`}
-                                >
-                                    Tout
-                                </button>
-                                <button
-                                    onClick={() => setDisplayMode('specific')}
-                                    className={`px-3 py-1 rounded-lg transition-colors ${displayMode === 'specific'
-                                        ? 'bg-white text-blue-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-800'
-                                        }`}
-                                >
-                                    Spécifique
-                                </button>
-                                <button
-                                    onClick={() => setDisplayMode('default')}
-                                    className={`px-3 py-1 rounded-lg transition-colors ${displayMode === 'default'
-                                        ? 'bg-white text-blue-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-800'
-                                        }`}
-                                >
-                                    Par défaut
-                                </button>
-                            </div>
-                            <button
-                                onClick={() => setIsAddModalOpen(true)}
-                                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                            >
-                                Ajouter des disponibilités
-                            </button>
-                        </div>
+                        <button
+                            onClick={() => setIsAddModalOpen(true)}
+                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        >
+                            Ajouter une disponibilité
+                        </button>
                     </div>
                     <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                         <h2 className="text-lg font-semibold mb-2">Disponibilités actuelles :</h2>
@@ -234,7 +203,6 @@ function AvailabilityManager() {
                         ref={weekCalendarRef}
                         events={events}
                         onAvailabilityChange={handleAvailabilityChange}
-                        displayMode={displayMode}
                     />
                 </div>
             )}
