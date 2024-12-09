@@ -87,7 +87,6 @@ export default function AvailabilityPage() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [displayMode, setDisplayMode] = useState<'default' | 'specific' | 'all'>('all');
     const weekCalendarRef = useRef<WeekCalendarRef>(null);
     const searchParams = useSearchParams();
     const key = searchParams.get('key');
@@ -115,7 +114,6 @@ export default function AvailabilityPage() {
     }, [key, intervenant]);
 
     const handleTypeSelect = (type: 'default' | 'specific') => {
-        setDisplayMode(type);
         // Ici on pourrait ajouter la logique pour filtrer les événements selon le type
     };
 
@@ -160,7 +158,6 @@ export default function AvailabilityPage() {
                 <div className="h-full overflow-y-auto">
                     <MonthCalendar
                         events={events}
-                        displayMode={displayMode}
                         onDateSelect={handleDateSelect}
                     />
                 </div>
@@ -181,57 +178,20 @@ export default function AvailabilityPage() {
                     <h1 className="text-2xl font-bold">
                         Bonjour {intervenant.name} {intervenant.lastname}
                     </h1>
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center bg-gray-100 rounded-lg p-1">
-                            <button
-                                onClick={() => setDisplayMode('all')}
-                                className={`px-4 py-2 rounded-lg transition-colors ${displayMode === 'all'
-                                    ? 'bg-white text-blue-600 shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-800'
-                                    }`}
-                            >
-                                Tout
-                            </button>
-                            <button
-                                onClick={() => setDisplayMode('specific')}
-                                className={`px-4 py-2 rounded-lg transition-colors ${displayMode === 'specific'
-                                    ? 'bg-white text-blue-600 shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-800'
-                                    }`}
-                            >
-                                Spécifique
-                            </button>
-                            <button
-                                onClick={() => setDisplayMode('default')}
-                                className={`px-4 py-2 rounded-lg transition-colors ${displayMode === 'default'
-                                    ? 'bg-white text-blue-600 shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-800'
-                                    }`}
-                            >
-                                Par défaut
-                            </button>
-                        </div>
-                        <button
-                            onClick={() => setIsAddModalOpen(true)}
-                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                        >
-                            Ajouter des disponibilités
-                        </button>
-                    </div>
+                    <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    >
+                        Ajouter une disponibilité
+                    </button>
                 </div>
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                    <h2 className="text-lg font-semibold mb-2">Vos disponibilités actuelles :</h2>
-                    <EditorWrapper
-                        initialValue={intervenant.availabilities}
-                        intervenantId={key}
+                    <Calendar
+                        ref={weekCalendarRef}
+                        events={events}
+                        onAvailabilityChange={handleAvailabilityChange}
                     />
                 </div>
-                <Calendar
-                    ref={weekCalendarRef}
-                    events={events}
-                    onAvailabilityChange={handleAvailabilityChange}
-                    displayMode={displayMode}
-                />
             </div>
 
             <AddAvailabilityModal
