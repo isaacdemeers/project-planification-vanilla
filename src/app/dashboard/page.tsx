@@ -11,6 +11,9 @@ import AdminEditorWrapper from '@/components/availability/admin-editor-wrapper';
 import { type RefObject } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import { WeekCalendar, type WeekCalendarRef } from '@/components/cal/calendar';
+import { useRouter } from 'next/navigation';
+import { Users, UserPlus, Calendar as CalendarIcon, Key } from 'lucide-react';
+import { Toast, type ToastType } from '@/components/ui/toast';
 
 function IntervenantSelector({ intervenants, selectedId, onSelect }: {
     intervenants: Intervenant[];
@@ -216,11 +219,167 @@ function AvailabilityManager() {
     );
 }
 
+function KeySettingsView() {
+    const [validityDays, setValidityDays] = useState(30);
+    const router = useRouter();
+    const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+
+    useEffect(() => {
+        fetch('/api/settings/key-validity')
+            .then(res => res.json())
+            .then(data => setValidityDays(data.days))
+            .catch(error => {
+                console.error('Error loading key validity:', error);
+                showToast('Erreur lors du chargement de la durée de validité', 'error');
+            });
+    }, []);
+
+    const showToast = (message: string, type: ToastType) => {
+        setToast({ message, type });
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            const response = await fetch('/api/settings/key-validity', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ days: validityDays }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to update key validity');
+            }
+
+            showToast('Durée de validité mise à jour avec succès', 'success');
+        } catch (error) {
+            console.error('Error updating key validity:', error);
+            showToast(
+                error instanceof Error ? error.message : 'Erreur lors de la mise à jour de la durée de validité',
+                'error'
+            );
+        }
+    };
+
+    const handleRegenerateAll = async () => {
+        if (!confirm('Êtes-vous sûr de vouloir régénérer toutes les clés ?')) return;
+
+        try {
+            const response = await fetch('/api/intervenant/regenerate-all-keys', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ validityDays }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to regenerate keys');
+            }
+
+            showToast('Toutes les clés ont été régénérées avec succès', 'success');
+            setValidityDays(data.validityDays);
+        } catch (error) {
+            console.error('Error regenerating keys:', error);
+            showToast(
+                error instanceof Error ? error.message : 'Erreur lors de la régénération des clés',
+                'error'
+            );
+        }
+    };
+
+    const handleDeleteAdmin = async () => {
+        if (!confirm('Êtes-vous sûr de vouloir supprimer le compte administrateur ? Cette action est irréversible.')) return;
+        if (!confirm('Cette action va vous déconnecter et supprimer le compte admin. Confirmer ?')) return;
+
+        try {
+            const response = await fetch('/api/admin/auth', {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to delete admin account');
+            }
+
+            localStorage.removeItem('adminToken');
+            router.push('/login');
+        } catch (error) {
+            console.error('Error deleting admin account:', error);
+            showToast(
+                error instanceof Error ? error.message : 'Erreur lors de la suppression du compte administrateur',
+                'error'
+            );
+        }
+    };
+
+    return (
+        <div className="max-w-2xl">
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
+            <h2 className="text-xl font-bold mb-6">Paramètres des clés de connexion</h2>
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Durée de validité (jours)
+                    </label>
+                    <input
+                        type="number"
+                        min="1"
+                        value={validityDays}
+                        onChange={e => setValidityDays(Number(e.target.value))}
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+                <div className="flex gap-4">
+                    <button
+                        type="submit"
+                        className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    >
+                        Mettre à jour
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleRegenerateAll}
+                        className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                        Régénérer toutes les clés
+                    </button>
+                </div>
+            </form>
+
+            <div className="mt-12 pt-6 border-t">
+                <h3 className="text-lg font-semibold text-red-600 mb-4">Zone dangereuse</h3>
+                <button
+                    onClick={handleDeleteAdmin}
+                    className="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                >
+                    Supprimer le compte administrateur
+                </button>
+                <p className="mt-2 text-sm text-gray-500">
+                    Cette action supprimera définitivement le compte administrateur et vous déconnectera.
+                    Vous devrez créer un nouveau compte administrateur pour accéder au dashboard.
+                </p>
+            </div>
+        </div>
+    );
+}
+
 export default function Dashboard() {
     return (
         <>
             <div className="flex flex-col gap-4">
-                <KeyValiditySettings />
+                <KeySettingsView />
                 <AddIntervenant onIntervenantAdded={() => { }} />
                 <IntervenantsList />
                 <AvailabilityManager />
