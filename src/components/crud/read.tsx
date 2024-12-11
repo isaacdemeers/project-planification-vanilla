@@ -98,49 +98,73 @@ export default function IntervenantsList({ selectedId, onShowCalendar }: Interve
     }
 
     return (
-        <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Liste des intervenants</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="p-6">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">Liste des intervenants</h2>
+                {intervenants.length > 0 && (
+                    <button
+                        onClick={handleRegenerateAllKeys}
+                        disabled={regeneratingAll}
+                        className={`bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${regeneratingAll ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                    >
+                        {regeneratingAll ? 'Régénération...' : 'Régénérer toutes les clés'}
+                    </button>
+                )}
+            </div>
+
+            <div className="grid gap-4">
                 {intervenants.map((intervenant) => (
-                    <div key={intervenant.id} className="bg-white p-4 rounded-lg shadow">
-                        <div className="flex justify-between items-start mb-4">
+                    <div
+                        key={intervenant.id}
+                        className="border rounded-lg p-4 shadow-sm"
+                    >
+                        <div className="flex justify-between items-start">
                             <div>
                                 <h3 className="font-semibold">
                                     {intervenant.name} {intervenant.lastname}
                                 </h3>
-                                <p className="text-sm text-gray-600">{intervenant.email}</p>
+                                <p className="text-gray-600">{intervenant.email}</p>
                             </div>
-                            <div className="space-x-2">
+                            <div className="flex items-center gap-2">
                                 <button
-                                    onClick={() => handleEdit(intervenant)}
+                                    onClick={() => onShowCalendar(intervenant.id)}
+                                    className={`px-3 py-1 rounded-md text-sm ${selectedId === intervenant.id
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                        }`}
+                                >
+                                    {selectedId === intervenant.id ? 'Masquer' : 'Voir'} le calendrier
+                                </button>
+                                <button
+                                    onClick={() => setEditingIntervenant(intervenant)}
                                     className="text-blue-600 hover:text-blue-800"
                                 >
                                     Modifier
                                 </button>
                                 <button
-                                    onClick={() => handleDelete(intervenant.id)}
+                                    onClick={() => setDeletingId(intervenant.id)}
                                     className="text-red-600 hover:text-red-800"
                                 >
                                     Supprimer
                                 </button>
                             </div>
                         </div>
-                        <div className="flex justify-between items-center">
-                            <button
-                                onClick={() => handleResetKey(intervenant.id)}
-                                className="text-sm text-gray-600 hover:text-gray-800"
-                            >
-                                Réinitialiser la clé
-                            </button>
-                            <button
-                                onClick={() => onShowCalendar(intervenant.id)}
-                                className={`px-3 py-1 rounded-md text-sm ${selectedId === intervenant.id
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                                    }`}
-                            >
-                                {selectedId === intervenant.id ? 'Masquer' : 'Voir'} le calendrier
-                            </button>
+
+                        <div className="mt-2 flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-4">
+                                <CopyLinkButton connectKey={intervenant.connect_key} />
+                                <button
+                                    onClick={() => handleRegenerateKey(intervenant.id)}
+                                    className="text-gray-600 hover:text-gray-800"
+                                >
+                                    Réinitialiser la clé
+                                </button>
+                            </div>
+                            <KeyValidityStatus
+                                createdAt={new Date(intervenant.connect_key_created_at)}
+                                validityDays={intervenant.connect_key_validity_days}
+                            />
                         </div>
                     </div>
                 ))}
@@ -166,60 +190,6 @@ export default function IntervenantsList({ selectedId, onShowCalendar }: Interve
                 onConfirm={() => deletingId && handleDelete(deletingId)}
                 onCancel={() => setDeletingId(null)}
             />
-
-            {intervenants.length === 0 ? (
-                <p className="text-gray-500">Aucun intervenant trouvé</p>
-            ) : (
-                <div className="grid gap-4">
-                    {intervenants.map((intervenant) => (
-                        <div
-                            key={intervenant.id}
-                            className="border rounded-lg p-4 shadow-sm"
-                        >
-                            <h3 className="font-semibold">
-                                {intervenant.name} {intervenant.lastname}
-                            </h3>
-                            <p className="text-gray-600">{intervenant.email}</p>
-
-                            <div className="mt-2 space-y-2">
-                                <p className="text-sm font-mono bg-gray-100 p-2 rounded break-all">
-                                    Clé de connexion: {intervenant.connect_key}
-                                </p>
-                                <div className="flex items-center justify-between">
-                                    <p className="text-xs text-gray-500">
-                                        Clé générée le: {new Date(intervenant.connect_key_created_at).toLocaleString()}
-                                    </p>
-                                    <CopyLinkButton connectKey={intervenant.connect_key} />
-                                </div>
-                                <KeyValidityStatus
-                                    createdAt={new Date(intervenant.connect_key_created_at)}
-                                    validityDays={intervenant.connect_key_validity_days}
-                                />
-                                <button
-                                    onClick={() => handleRegenerateKey(intervenant.id)}
-                                    className="text-sm text-blue-500 hover:text-blue-600"
-                                >
-                                    Régénérer la clé
-                                </button>
-                            </div>
-                            <div className="mt-2 flex gap-2">
-                                <button
-                                    onClick={() => setEditingIntervenant(intervenant)}
-                                    className="text-blue-500 hover:text-blue-600"
-                                >
-                                    Modifier
-                                </button>
-                                <button
-                                    onClick={() => setDeletingId(intervenant.id)}
-                                    className="text-red-500 hover:text-red-600"
-                                >
-                                    Supprimer
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
         </div>
     );
 }
