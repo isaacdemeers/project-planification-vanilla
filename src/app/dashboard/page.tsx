@@ -11,6 +11,7 @@ import AdminEditorWrapper from '@/components/availability/admin-editor-wrapper';
 import { type RefObject } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import { WeekCalendar, type WeekCalendarRef } from '@/components/cal/calendar';
+import IntervenantCalendar from '@/components/calendar/intervenant-calendar';
 
 function IntervenantSelector({ intervenants, selectedId, onSelect }: {
     intervenants: Intervenant[];
@@ -256,6 +257,7 @@ export default function Dashboard() {
                 <AddIntervenant onIntervenantAdded={() => { }} />
                 <IntervenantsList />
                 <AvailabilityManager />
+                <IntervenantCalendar intervenantId="id-de-l-intervenant" />
             </div>
         </>
     );

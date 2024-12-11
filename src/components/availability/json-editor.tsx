@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { validateAndCleanAvailabilities } from '@/lib/calendar-utils';
+import { useState, useEffect } from 'react';
 
 interface JsonEditorProps {
     initialValue: object;
@@ -9,67 +8,41 @@ interface JsonEditorProps {
 }
 
 export default function JsonEditor({ initialValue, onSave }: JsonEditorProps) {
-    const [jsonText, setJsonText] = useState(JSON.stringify(initialValue, null, 2));
+    const [jsonText, setJsonText] = useState('');
     const [error, setError] = useState<string | null>(null);
-    const [isEditing, setIsEditing] = useState(false);
 
-    const handleEdit = () => {
-        setIsEditing(true);
-    };
+    useEffect(() => {
+        // Formater le JSON avec une indentation de 2 espaces
+        setJsonText(JSON.stringify(initialValue, null, 2));
+    }, [initialValue]);
 
     const handleSave = async () => {
         try {
             const parsedJson = JSON.parse(jsonText);
-            const validatedJson = validateAndCleanAvailabilities(parsedJson);
-            await onSave(validatedJson);
-            setIsEditing(false);
+            await onSave(parsedJson);
             setError(null);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Format JSON invalide');
         }
     };
 
-    const handleCancel = () => {
-        setJsonText(JSON.stringify(initialValue, null, 2));
-        setIsEditing(false);
-        setError(null);
-    };
-
     return (
-        <div className="mb-4">
-            {isEditing ? (
-                <>
-                    <textarea
-                        value={jsonText}
-                        onChange={(e) => setJsonText(e.target.value)}
-                        className="w-full h-48 p-2 font-mono text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    {error && (
-                        <p className="text-red-500 text-sm mt-1">{error}</p>
-                    )}
-                    <div className="mt-2 flex gap-2">
-                        <button
-                            onClick={handleSave}
-                            className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                        >
-                            Sauvegarder
-                        </button>
-                        <button
-                            onClick={handleCancel}
-                            className="px-3 py-1 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-                        >
-                            Annuler
-                        </button>
-                    </div>
-                </>
-            ) : (
-                <button
-                    onClick={handleEdit}
-                    className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                >
-                    Modifier les disponibilités
-                </button>
+        <div className="space-y-4">
+            <textarea
+                value={jsonText}
+                onChange={(e) => setJsonText(e.target.value)}
+                className="w-full h-96 font-mono text-sm p-4 border rounded-lg"
+                spellCheck={false}
+            />
+            {error && (
+                <p className="text-red-500 text-sm">{error}</p>
             )}
+            <button
+                onClick={handleSave}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            >
+                Sauvegarder
+            </button>
         </div>
     );
 }
