@@ -7,7 +7,8 @@ import DeleteConfirmation from './delete';
 import CopyLinkButton from './copy-link-button';
 
 interface IntervenantsListProps {
-    refreshTrigger?: number;
+    selectedId: string | null;
+    onShowCalendar: (id: string) => void;
 }
 
 function getRemainingDays(createdAt: Date, validityDays: number): number {
@@ -32,7 +33,7 @@ function KeyValidityStatus({ createdAt, validityDays }: { createdAt: Date, valid
     );
 }
 
-export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsListProps) {
+export default function IntervenantsList({ selectedId, onShowCalendar }: IntervenantsListProps) {
     const [intervenants, setIntervenants] = useState<Intervenant[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -54,7 +55,7 @@ export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsLis
 
     useEffect(() => {
         fetchIntervenants();
-    }, [refreshTrigger]);
+    }, []);
 
     const handleDelete = async (id: string) => {
         try {
@@ -97,19 +98,52 @@ export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsLis
     }
 
     return (
-        <div className="p-6">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold">Liste des intervenants</h2>
-                {intervenants.length > 0 && (
-                    <button
-                        onClick={handleRegenerateAllKeys}
-                        disabled={regeneratingAll}
-                        className={`bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${regeneratingAll ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
-                    >
-                        {regeneratingAll ? 'Régénération...' : 'Régénérer toutes les clés'}
-                    </button>
-                )}
+        <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Liste des intervenants</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {intervenants.map((intervenant) => (
+                    <div key={intervenant.id} className="bg-white p-4 rounded-lg shadow">
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 className="font-semibold">
+                                    {intervenant.name} {intervenant.lastname}
+                                </h3>
+                                <p className="text-sm text-gray-600">{intervenant.email}</p>
+                            </div>
+                            <div className="space-x-2">
+                                <button
+                                    onClick={() => handleEdit(intervenant)}
+                                    className="text-blue-600 hover:text-blue-800"
+                                >
+                                    Modifier
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(intervenant.id)}
+                                    className="text-red-600 hover:text-red-800"
+                                >
+                                    Supprimer
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <button
+                                onClick={() => handleResetKey(intervenant.id)}
+                                className="text-sm text-gray-600 hover:text-gray-800"
+                            >
+                                Réinitialiser la clé
+                            </button>
+                            <button
+                                onClick={() => onShowCalendar(intervenant.id)}
+                                className={`px-3 py-1 rounded-md text-sm ${selectedId === intervenant.id
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                    }`}
+                            >
+                                {selectedId === intervenant.id ? 'Masquer' : 'Voir'} le calendrier
+                            </button>
+                        </div>
+                    </div>
+                ))}
             </div>
 
             {editingIntervenant && (
