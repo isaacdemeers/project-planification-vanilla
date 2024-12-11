@@ -170,43 +170,45 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
     const convertAvailabilitiesToEvents = useMemo(() => () => {
         const newEvents: CalendarEvent[] = [];
 
-        if (availabilities.default) {
+        if (isRecurrent && availabilities.default) {
             availabilities.default.forEach((slot: any) => {
                 newEvents.push(...generateRecurringEvents(slot, 'default'));
             });
         }
 
-        Object.entries(availabilities).forEach(([weekKey, slots]) => {
-            if (weekKey === 'default') return;
+        if (!isRecurrent) {
+            Object.entries(availabilities).forEach(([weekKey, slots]) => {
+                if (weekKey === 'default') return;
 
-            (slots as any[]).forEach((slot: any) => {
-                const [hours, minutes] = slot.from.split(':').map(Number);
-                const [endHours, endMinutes] = slot.to.split(':').map(Number);
-                const date = getDateFromWeekAndDay(weekKey, slot.days, academicYear);
+                (slots as any[]).forEach((slot: any) => {
+                    const [hours, minutes] = slot.from.split(':').map(Number);
+                    const [endHours, endMinutes] = slot.to.split(':').map(Number);
+                    const date = getDateFromWeekAndDay(weekKey, slot.days, academicYear);
 
-                if (date) {
-                    const start = new Date(date);
-                    start.setHours(hours, minutes);
-                    const end = new Date(date);
-                    end.setHours(endHours, endMinutes);
+                    if (date) {
+                        const start = new Date(date);
+                        start.setHours(hours, minutes);
+                        const end = new Date(date);
+                        end.setHours(endHours, endMinutes);
 
-                    newEvents.push({
-                        title: 'Disponible',
-                        start: start.toISOString(),
-                        end: end.toISOString(),
-                        backgroundColor: '#93c5fd',
-                        borderColor: '#93c5fd'
-                    });
-                }
+                        newEvents.push({
+                            title: 'Disponible',
+                            start: start.toISOString(),
+                            end: end.toISOString(),
+                            backgroundColor: '#93c5fd',
+                            borderColor: '#93c5fd'
+                        });
+                    }
+                });
             });
-        });
+        }
 
         return newEvents;
-    }, [availabilities, generateRecurringEvents, academicYear]);
+    }, [availabilities, generateRecurringEvents, academicYear, isRecurrent]);
 
     useEffect(() => {
         setEvents(convertAvailabilitiesToEvents());
-    }, [convertAvailabilitiesToEvents]);
+    }, [convertAvailabilitiesToEvents, isRecurrent]);
 
     function getDateFromWeekAndDay(weekKey: string, day: string, academicYear: { start: Date, end: Date }): Date | null {
         if (weekKey === 'default') {
@@ -283,26 +285,28 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
         if (!deleteModal.event) return;
 
         const eventToDelete = deleteModal.event;
-        const { weekKey } = formatEventToAvailability(eventToDelete);
-
-        setEvents(prev => prev.filter(event =>
-            event.start !== eventToDelete.startStr ||
-            event.end !== eventToDelete.endStr
-        ));
+        const isRecurrentEvent = eventToDelete.title.includes('Récurrent');
+        const { weekKey, availability } = formatEventToAvailability(eventToDelete);
 
         const newAvailabilities = { ...availabilities };
-        if (newAvailabilities[weekKey]) {
+        const targetKey = isRecurrentEvent ? 'default' : weekKey;
+
+        if (newAvailabilities[targetKey]) {
             const eventTime = new Date(eventToDelete.start).toLocaleTimeString('fr-FR', {
                 hour: '2-digit',
                 minute: '2-digit'
             });
-            newAvailabilities[weekKey] = newAvailabilities[weekKey].filter(
-                (a: any) => a.from !== eventTime
+            const eventDay = getDayName(new Date(eventToDelete.start).getDay());
+
+            newAvailabilities[targetKey] = newAvailabilities[targetKey].filter(
+                (a: any) => !(a.from === eventTime && a.days === eventDay)
             );
-            if (newAvailabilities[weekKey].length === 0) {
-                delete newAvailabilities[weekKey];
+
+            if (newAvailabilities[targetKey].length === 0) {
+                delete newAvailabilities[targetKey];
             }
         }
+
         setAvailabilities(newAvailabilities);
         setDeleteModal({ isOpen: false, event: null });
     }, [deleteModal.event, availabilities]);
