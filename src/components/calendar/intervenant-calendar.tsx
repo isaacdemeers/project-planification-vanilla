@@ -416,16 +416,6 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
                 />
             </div>
 
-            <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold mb-2">Disponibilités actuelles</h3>
-                <textarea
-                    value={JSON.stringify(availabilities, null, 2)}
-                    readOnly
-                    className="w-full h-64 font-mono text-sm p-4 border rounded-lg bg-white"
-                    spellCheck={false}
-                />
-            </div>
-
             <DeleteModal
                 isOpen={deleteModal.isOpen}
                 onClose={() => setDeleteModal({ isOpen: false, event: null, calendar: null })}

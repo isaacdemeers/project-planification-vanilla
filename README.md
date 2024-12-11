@@ -38,4 +38,20 @@
 - vue des disponibilités dans le dashboard (non terminé)
 
 
+## Rendu 4 - Semaine du 09 Décembre
+
+#### Links
+  - [Branche du rendu](https://github.com/isaacdemeers/project-planification-vanilla/tree/RENDU4)
+ 
+#### Changelog
+
+[ITERATION 17]
+
+##### Updated
+- Le systeme de calendrier est maintenant entirement fonctionnel.
+- Fonctionnement de la gestion des disponibilités.
+
+##### Added
+- Calendrier fonctionnel dans le dashboard.
+
 
