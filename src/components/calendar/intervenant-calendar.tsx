@@ -139,30 +139,33 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
         const events: CalendarEvent[] = [];
         const [hours, minutes] = slot.from.split(':').map(Number);
         const [endHours, endMinutes] = slot.to.split(':').map(Number);
-        const dayIndex = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'].indexOf(slot.days);
+        const days = slot.days.split(',').map((day: string) => day.trim());
 
-        if (dayIndex === -1) return events;
+        days.forEach((day: string) => {
+            const dayIndex = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'].indexOf(day);
+            if (dayIndex === -1) return;
 
-        let currentDate = new Date(academicYear.start);
-        const diff = (dayIndex + 1 - (currentDate.getDay() || 7) + 7) % 7;
-        currentDate.setDate(currentDate.getDate() + diff);
+            let currentDate = new Date(academicYear.start);
+            const diff = (dayIndex + 1 - (currentDate.getDay() || 7) + 7) % 7;
+            currentDate.setDate(currentDate.getDate() + diff);
 
-        while (currentDate <= academicYear.end) {
-            const start = new Date(currentDate);
-            start.setHours(hours, minutes, 0);
-            const end = new Date(currentDate);
-            end.setHours(endHours, endMinutes, 0);
+            while (currentDate <= academicYear.end) {
+                const start = new Date(currentDate);
+                start.setHours(hours, minutes, 0);
+                const end = new Date(currentDate);
+                end.setHours(endHours, endMinutes, 0);
 
-            events.push({
-                title: 'Disponible (Récurrent)',
-                start: start.toISOString(),
-                end: end.toISOString(),
-                backgroundColor: '#60a5fa',
-                borderColor: '#60a5fa'
-            });
+                events.push({
+                    title: 'Disponible (Récurrent)',
+                    start: start.toISOString(),
+                    end: end.toISOString(),
+                    backgroundColor: '#60a5fa',
+                    borderColor: '#60a5fa'
+                });
 
-            currentDate.setDate(currentDate.getDate() + 7);
-        }
+                currentDate.setDate(currentDate.getDate() + 7);
+            }
+        });
 
         return events;
     }, [academicYear]);
@@ -170,38 +173,41 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
     const convertAvailabilitiesToEvents = useMemo(() => () => {
         const newEvents: CalendarEvent[] = [];
 
-        if (isRecurrent && availabilities.default) {
+        if (isRecurrent && Array.isArray(availabilities.default)) {
             availabilities.default.forEach((slot: any) => {
                 newEvents.push(...generateRecurringEvents(slot, 'default'));
             });
         }
 
-        if (!isRecurrent) {
-            Object.entries(availabilities).forEach(([weekKey, slots]) => {
-                if (weekKey === 'default') return;
+        Object.entries(availabilities).forEach(([weekKey, slots]) => {
+            if (weekKey === 'default') return;
 
-                (slots as any[]).forEach((slot: any) => {
+            if (Array.isArray(slots)) {
+                slots.forEach((slot: any) => {
                     const [hours, minutes] = slot.from.split(':').map(Number);
                     const [endHours, endMinutes] = slot.to.split(':').map(Number);
-                    const date = getDateFromWeekAndDay(weekKey, slot.days, academicYear);
+                    const days = slot.days.split(',').map((day: string) => day.trim());
 
-                    if (date) {
-                        const start = new Date(date);
-                        start.setHours(hours, minutes);
-                        const end = new Date(date);
-                        end.setHours(endHours, endMinutes);
+                    days.forEach((day: string) => {
+                        const date = getDateFromWeekAndDay(weekKey, day, academicYear);
+                        if (date) {
+                            const start = new Date(date);
+                            start.setHours(hours, minutes);
+                            const end = new Date(date);
+                            end.setHours(endHours, endMinutes);
 
-                        newEvents.push({
-                            title: 'Disponible',
-                            start: start.toISOString(),
-                            end: end.toISOString(),
-                            backgroundColor: '#93c5fd',
-                            borderColor: '#93c5fd'
-                        });
-                    }
+                            newEvents.push({
+                                title: 'Disponible',
+                                start: start.toISOString(),
+                                end: end.toISOString(),
+                                backgroundColor: '#93c5fd',
+                                borderColor: '#93c5fd'
+                            });
+                        }
+                    });
                 });
-            });
-        }
+            }
+        });
 
         return newEvents;
     }, [availabilities, generateRecurringEvents, academicYear, isRecurrent]);
@@ -263,19 +269,17 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
             return;
         }
 
-        setEvents(prev => [...prev, newEvent]);
-
         const { weekKey, availability } = formatEventToAvailability(newEvent);
         const newAvailabilities = { ...availabilities };
-
         const targetKey = isRecurrent ? 'default' : weekKey;
 
         if (!newAvailabilities[targetKey]) {
             newAvailabilities[targetKey] = [];
         }
         newAvailabilities[targetKey].push(availability);
-        setAvailabilities(newAvailabilities);
-    }, [events, availabilities, isRecurrent]);
+
+        saveAvailabilities(newAvailabilities);
+    }, [events, availabilities, isRecurrent, intervenantId]);
 
     const handleEventClick = useCallback((clickInfo: any) => {
         setDeleteModal({ isOpen: true, event: clickInfo.event });
@@ -305,11 +309,50 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
             if (newAvailabilities[targetKey].length === 0) {
                 delete newAvailabilities[targetKey];
             }
+
+            saveAvailabilities(newAvailabilities);
         }
 
-        setAvailabilities(newAvailabilities);
         setDeleteModal({ isOpen: false, event: null });
-    }, [deleteModal.event, availabilities]);
+    }, [deleteModal.event, availabilities, intervenantId]);
+
+    // Charger les disponibilités initiales
+    useEffect(() => {
+        const fetchAvailabilities = async () => {
+            try {
+                const response = await fetch(`/api/admin/intervenant/${intervenantId}/availabilities`);
+                if (!response.ok) throw new Error('Failed to fetch availabilities');
+                const data = await response.json();
+                setAvailabilities(data.availabilities || {});
+            } catch (error) {
+                console.error('Error fetching availabilities:', error);
+                setError('Erreur lors du chargement des disponibilités');
+            }
+        };
+
+        fetchAvailabilities();
+    }, [intervenantId]);
+
+    // Fonction pour sauvegarder les disponibilités
+    const saveAvailabilities = async (newAvailabilities: any) => {
+        try {
+            const response = await fetch(`/api/admin/intervenant/${intervenantId}/availabilities`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ availabilities: newAvailabilities }),
+            });
+
+            if (!response.ok) throw new Error('Failed to save availabilities');
+
+            const data = await response.json();
+            setAvailabilities(data.availabilities || {});
+        } catch (error) {
+            console.error('Error saving availabilities:', error);
+            setError('Erreur lors de la sauvegarde des disponibilités');
+        }
+    };
 
     return (
         <div className="space-y-6">
