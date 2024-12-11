@@ -30,10 +30,17 @@ function getAcademicYearDates() {
     };
 }
 
-function formatEventToAvailability(event: any) {
+function formatEventToAvailability(event: any, calendar: any) {
     const start = new Date(event.start);
     const end = new Date(event.end);
-    const weekNumber = getWeekNumber(start);
+
+    // Récupérer la date de début de la semaine affichée
+    const currentDate = calendar.currentData.currentDate;
+    const weekStart = new Date(currentDate);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // Lundi de la semaine courante
+
+    // Calculer le numéro de semaine
+    const weekNumber = getWeekNumber(weekStart);
 
     return {
         weekKey: `S${weekNumber}`,
@@ -132,7 +139,11 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
     const [availabilities, setAvailabilities] = useState<any>({});
     const [error, setError] = useState<string | null>(null);
     const academicYear = useMemo(() => getAcademicYearDates(), []);
-    const [deleteModal, setDeleteModal] = useState({ isOpen: false, event: null as any });
+    const [deleteModal, setDeleteModal] = useState({
+        isOpen: false,
+        event: null as any,
+        calendar: null as any
+    });
     const [isRecurrent, setIsRecurrent] = useState(false);
 
     const generateRecurringEvents = useMemo(() => (slot: any, weekKey: string) => {
@@ -173,10 +184,13 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
     const convertAvailabilitiesToEvents = useMemo(() => () => {
         const newEvents: CalendarEvent[] = [];
 
-        if (isRecurrent && Array.isArray(availabilities.default)) {
-            availabilities.default.forEach((slot: any) => {
-                newEvents.push(...generateRecurringEvents(slot, 'default'));
-            });
+        if (isRecurrent) {
+            if (Array.isArray(availabilities.default)) {
+                availabilities.default.forEach((slot: any) => {
+                    newEvents.push(...generateRecurringEvents(slot, 'default'));
+                });
+            }
+            return newEvents;
         }
 
         Object.entries(availabilities).forEach(([weekKey, slots]) => {
@@ -269,7 +283,7 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
             return;
         }
 
-        const { weekKey, availability } = formatEventToAvailability(newEvent);
+        const { weekKey, availability } = formatEventToAvailability(newEvent, selectInfo.view.calendar);
         const newAvailabilities = { ...availabilities };
         const targetKey = isRecurrent ? 'default' : weekKey;
 
@@ -282,7 +296,11 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
     }, [events, availabilities, isRecurrent, intervenantId]);
 
     const handleEventClick = useCallback((clickInfo: any) => {
-        setDeleteModal({ isOpen: true, event: clickInfo.event });
+        setDeleteModal({
+            isOpen: true,
+            event: clickInfo.event,
+            calendar: clickInfo.view.calendar
+        });
     }, []);
 
     const handleDeleteConfirm = useCallback(() => {
@@ -290,7 +308,7 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
 
         const eventToDelete = deleteModal.event;
         const isRecurrentEvent = eventToDelete.title.includes('Récurrent');
-        const { weekKey, availability } = formatEventToAvailability(eventToDelete);
+        const { weekKey, availability } = formatEventToAvailability(eventToDelete, deleteModal.calendar);
 
         const newAvailabilities = { ...availabilities };
         const targetKey = isRecurrentEvent ? 'default' : weekKey;
@@ -313,8 +331,8 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
             saveAvailabilities(newAvailabilities);
         }
 
-        setDeleteModal({ isOpen: false, event: null });
-    }, [deleteModal.event, availabilities, intervenantId]);
+        setDeleteModal({ isOpen: false, event: null, calendar: null });
+    }, [deleteModal.event, deleteModal.calendar, availabilities, intervenantId]);
 
     // Charger les disponibilités initiales
     useEffect(() => {
@@ -410,7 +428,7 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
 
             <DeleteModal
                 isOpen={deleteModal.isOpen}
-                onClose={() => setDeleteModal({ isOpen: false, event: null })}
+                onClose={() => setDeleteModal({ isOpen: false, event: null, calendar: null })}
                 onConfirm={handleDeleteConfirm}
             />
         </div>
