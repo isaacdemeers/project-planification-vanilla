@@ -7,7 +7,8 @@ import DeleteConfirmation from './delete';
 import CopyLinkButton from './copy-link-button';
 
 interface IntervenantsListProps {
-    refreshTrigger?: number;
+    selectedId: string | null;
+    onShowCalendar: (id: string) => void;
 }
 
 function getRemainingDays(createdAt: Date, validityDays: number): number {
@@ -32,7 +33,7 @@ function KeyValidityStatus({ createdAt, validityDays }: { createdAt: Date, valid
     );
 }
 
-export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsListProps) {
+export default function IntervenantsList({ selectedId, onShowCalendar }: IntervenantsListProps) {
     const [intervenants, setIntervenants] = useState<Intervenant[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -54,7 +55,7 @@ export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsLis
 
     useEffect(() => {
         fetchIntervenants();
-    }, [refreshTrigger]);
+    }, []);
 
     const handleDelete = async (id: string) => {
         try {
@@ -112,6 +113,63 @@ export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsLis
                 )}
             </div>
 
+            <div className="grid gap-4">
+                {intervenants.map((intervenant) => (
+                    <div
+                        key={intervenant.id}
+                        className="border rounded-lg p-4 shadow-sm"
+                    >
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <h3 className="font-semibold">
+                                    {intervenant.name} {intervenant.lastname}
+                                </h3>
+                                <p className="text-gray-600">{intervenant.email}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => onShowCalendar(intervenant.id)}
+                                    className={`px-3 py-1 rounded-md text-sm ${selectedId === intervenant.id
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                        }`}
+                                >
+                                    {selectedId === intervenant.id ? 'Masquer' : 'Voir'} le calendrier
+                                </button>
+                                <button
+                                    onClick={() => setEditingIntervenant(intervenant)}
+                                    className="text-blue-600 hover:text-blue-800"
+                                >
+                                    Modifier
+                                </button>
+                                <button
+                                    onClick={() => setDeletingId(intervenant.id)}
+                                    className="text-red-600 hover:text-red-800"
+                                >
+                                    Supprimer
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="mt-2 flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-4">
+                                <CopyLinkButton connectKey={intervenant.connect_key} />
+                                <button
+                                    onClick={() => handleRegenerateKey(intervenant.id)}
+                                    className="text-gray-600 hover:text-gray-800"
+                                >
+                                    Réinitialiser la clé
+                                </button>
+                            </div>
+                            <KeyValidityStatus
+                                createdAt={new Date(intervenant.connect_key_created_at)}
+                                validityDays={intervenant.connect_key_validity_days}
+                            />
+                        </div>
+                    </div>
+                ))}
+            </div>
+
             {editingIntervenant && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-lg max-w-md w-full">
@@ -132,60 +190,6 @@ export default function IntervenantsList({ refreshTrigger = 0 }: IntervenantsLis
                 onConfirm={() => deletingId && handleDelete(deletingId)}
                 onCancel={() => setDeletingId(null)}
             />
-
-            {intervenants.length === 0 ? (
-                <p className="text-gray-500">Aucun intervenant trouvé</p>
-            ) : (
-                <div className="grid gap-4">
-                    {intervenants.map((intervenant) => (
-                        <div
-                            key={intervenant.id}
-                            className="border rounded-lg p-4 shadow-sm"
-                        >
-                            <h3 className="font-semibold">
-                                {intervenant.name} {intervenant.lastname}
-                            </h3>
-                            <p className="text-gray-600">{intervenant.email}</p>
-
-                            <div className="mt-2 space-y-2">
-                                <p className="text-sm font-mono bg-gray-100 p-2 rounded break-all">
-                                    Clé de connexion: {intervenant.connect_key}
-                                </p>
-                                <div className="flex items-center justify-between">
-                                    <p className="text-xs text-gray-500">
-                                        Clé générée le: {new Date(intervenant.connect_key_created_at).toLocaleString()}
-                                    </p>
-                                    <CopyLinkButton connectKey={intervenant.connect_key} />
-                                </div>
-                                <KeyValidityStatus
-                                    createdAt={new Date(intervenant.connect_key_created_at)}
-                                    validityDays={intervenant.connect_key_validity_days}
-                                />
-                                <button
-                                    onClick={() => handleRegenerateKey(intervenant.id)}
-                                    className="text-sm text-blue-500 hover:text-blue-600"
-                                >
-                                    Régénérer la clé
-                                </button>
-                            </div>
-                            <div className="mt-2 flex gap-2">
-                                <button
-                                    onClick={() => setEditingIntervenant(intervenant)}
-                                    className="text-blue-500 hover:text-blue-600"
-                                >
-                                    Modifier
-                                </button>
-                                <button
-                                    onClick={() => setDeletingId(intervenant.id)}
-                                    className="text-red-500 hover:text-red-600"
-                                >
-                                    Supprimer
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
         </div>
     );
 }
