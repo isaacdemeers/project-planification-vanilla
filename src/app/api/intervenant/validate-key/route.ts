@@ -6,7 +6,10 @@ export async function GET(request: Request) {
     const key = searchParams.get('key');
 
     if (!key) {
-        return NextResponse.json({ error: 'Missing key parameter' }, { status: 400 });
+        return NextResponse.json(
+            { error: 'Missing key parameter' },
+            { status: 400 }
+        );
     }
 
     const client = await db.connect();
@@ -20,10 +23,13 @@ export async function GET(request: Request) {
         );
 
         if (result.rows.length === 0) {
-            return NextResponse.json({ error: 'Invalid or expired key' }, { status: 401 });
+            return NextResponse.json(
+                { error: 'Invalid or expired key' },
+                { status: 200 }
+            );
         }
 
-        return NextResponse.json(result.rows[0]);
+        return NextResponse.json(result.rows[0], { status: 200 });
     } catch (error) {
         console.error('Database error:', error);
         return NextResponse.json(

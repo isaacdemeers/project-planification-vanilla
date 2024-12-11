@@ -425,11 +425,16 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
                     selectMirror={true}
                     eventClick={handleEventClick}
                     unselectAuto={true}
-                    dayHeaderFormat={{
-                        weekday: isRecurrent ? 'long' : undefined,
-                        month: isRecurrent ? undefined : 'numeric',
-                        day: isRecurrent ? undefined : 'numeric',
-                        year: isRecurrent ? undefined : 'numeric',
+                    dayHeaderFormat={isRecurrent ? {
+                        weekday: 'long',
+                        month: undefined,
+                        day: undefined,
+                        year: undefined,
+                        omitCommas: true
+                    } : {
+                        weekday: 'short',
+                        month: 'numeric',
+                        day: 'numeric',
                         omitCommas: true
                     }}
                     dayHeaderFormatter={formatDayHeader}
