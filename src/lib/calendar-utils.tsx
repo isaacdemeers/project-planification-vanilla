@@ -39,6 +39,9 @@ function isValidAvailability(availability: any): availability is Availability {
 function isValidAvailabilityPeriod(period: any): period is AvailabilityPeriod {
     if (!period || typeof period !== 'object') return false;
 
+    // Allow empty objects
+    if (Object.keys(period).length === 0) return true;
+
     // Vérifier chaque clé du period
     return Object.entries(period).every(([key, value]) => {
         // Vérifier que la clé est soit 'default' soit commence par 'S' suivi d'un nombre
@@ -51,6 +54,9 @@ function isValidAvailabilityPeriod(period: any): period is AvailabilityPeriod {
 
 // Fonction pour valider et nettoyer les disponibilités
 export function validateAndCleanAvailabilities(availabilities: any): AvailabilityPeriod {
+    if (availabilities === null || availabilities === undefined) {
+        return {};
+    }
     if (!isValidAvailabilityPeriod(availabilities)) {
         console.error('Invalid availability format:', availabilities);
         throw new Error('Format des disponibilités invalide');
