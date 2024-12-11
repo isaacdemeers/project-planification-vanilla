@@ -372,6 +372,18 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
         }
     };
 
+    // Fonction pour formater les dates du calendrier
+    const formatDayHeader = useCallback((arg: { date: Date, text: string }) => {
+        if (isRecurrent) {
+            // En mode récurrent, n'afficher que le nom du jour
+            const weekday = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' })
+                .format(arg.date);
+            return weekday.charAt(0).toUpperCase() + weekday.slice(1);
+        }
+        // En mode normal, utiliser le texte par défaut fourni
+        return arg.text;
+    }, [isRecurrent]);
+
     return (
         <div className="space-y-6">
             <WeekTypeSelector
@@ -413,16 +425,19 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
                     selectMirror={true}
                     eventClick={handleEventClick}
                     unselectAuto={true}
-                />
-            </div>
-
-            <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold mb-2">Disponibilités actuelles</h3>
-                <textarea
-                    value={JSON.stringify(availabilities, null, 2)}
-                    readOnly
-                    className="w-full h-64 font-mono text-sm p-4 border rounded-lg bg-white"
-                    spellCheck={false}
+                    dayHeaderFormat={isRecurrent ? {
+                        weekday: 'long',
+                        month: undefined,
+                        day: undefined,
+                        year: undefined,
+                        omitCommas: true
+                    } : {
+                        weekday: 'short',
+                        month: 'numeric',
+                        day: 'numeric',
+                        omitCommas: true
+                    }}
+                    dayHeaderFormatter={formatDayHeader}
                 />
             </div>
 
