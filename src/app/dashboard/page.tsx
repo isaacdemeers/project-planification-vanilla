@@ -5,7 +5,7 @@ import AddIntervenant from '@/components/crud/add';
 import IntervenantsList from '@/components/crud/read';
 import KeyValiditySettings from '@/components/settings/key-validity';
 import IntervenantCalendar from '@/components/calendar/intervenant-calendar';
-import type { Intervenant } from '@/lib/requests';
+import { Download } from 'lucide-react';
 
 export default function Dashboard() {
     const [selectedIntervenantId, setSelectedIntervenantId] = useState<string | null>(null);
@@ -14,16 +14,45 @@ export default function Dashboard() {
         setSelectedIntervenantId(id === selectedIntervenantId ? null : id);
     };
 
+    const handleExportJSON = async () => {
+        try {
+            const response = await fetch('/api/admin/export');
+            const data = await response.json();
+
+            // Créer et télécharger le fichier
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'availabilities.json';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error('Error exporting data:', error);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900">
-                        Tableau de bord administrateur
-                    </h1>
-                    <p className="mt-2 text-sm text-gray-600">
-                        Gérez les intervenants et leurs disponibilités
-                    </p>
+                <div className="mb-8 flex justify-between items-center">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900">
+                            Tableau de bord administrateur
+                        </h1>
+                        <p className="mt-2 text-sm text-gray-600">
+                            Gérez les intervenants et leurs disponibilités
+                        </p>
+                    </div>
+                    <button
+                        onClick={handleExportJSON}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                    >
+                        <Download size={20} />
+                        Exporter JSON
+                    </button>
                 </div>
 
                 <div className="grid grid-cols-1 gap-8">
