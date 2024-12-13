@@ -45,13 +45,15 @@
  
 #### Changelog
 
-[ITERATION 17]
+[ITERATION 18]
 
 ##### Updated
 - Le systeme de calendrier est maintenant entirement fonctionnel.
 - Fonctionnement de la gestion des disponibilités.
+- UI des pages.
 
 ##### Added
 - Calendrier fonctionnel dans le dashboard.
+- Export des disponibilités en JSON.
 
 
