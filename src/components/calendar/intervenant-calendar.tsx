@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -111,47 +111,101 @@ function DeleteModal({ isOpen, onClose, onConfirm }: DeleteModalProps) {
     );
 }
 
-function WeekTypeSelector({ isRecurrent, onChange, hasSpecificAvailabilities }: {
+function HeaderSection({
+    isRecurrent,
+    onRecurrentChange,
+    hasSpecificAvailabilities,
+    currentWeek,
+    workweek
+}: {
     isRecurrent: boolean;
-    onChange: (isRecurrent: boolean) => void;
+    onRecurrentChange: (value: boolean) => void;
     hasSpecificAvailabilities: boolean;
+    currentWeek: number;
+    workweek: any[];
 }) {
     return (
-        <div className="flex items-center gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center gap-2">
-                <input
-                    type="checkbox"
-                    id="weekType"
-                    checked={isRecurrent}
-                    onChange={(e) => onChange(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 focus:ring-blue-500 text-blue-600 cursor-pointer"
-                />
-                <label
-                    htmlFor="weekType"
-                    className="text-sm text-gray-700"
-                >
-                    Disponibilité récurrente
-                </label>
-            </div>
-            <div className="ml-2 flex items-center gap-2">
-                <span className="text-xs text-gray-500">
-                    {isRecurrent ? (
-                        "Affichage des disponibilités récurrentes"
-                    ) : (
-                        "Affichage des disponibilités spécifiques à la semaine"
+        <div className="bg-gray-50 rounded-lg p-4">
+            <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex bg-white rounded-lg p-1 shadow-sm">
+                        <button
+                            onClick={() => onRecurrentChange(false)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!isRecurrent
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'text-gray-600 hover:text-gray-800'
+                                }`}
+                        >
+                            Mode spécifique
+                        </button>
+                        <button
+                            onClick={() => onRecurrentChange(true)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isRecurrent
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'text-gray-600 hover:text-gray-800'
+                                }`}
+                        >
+                            Mode récurrent
+                        </button>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                        {isRecurrent ? (
+                            "Les disponibilités seront appliquées à toutes les semaines"
+                        ) : (
+                            "Les disponibilités seront spécifiques à la semaine sélectionnée"
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between border-t pt-4">
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
+                            <span className="text-blue-700 font-medium">Semaine {currentWeek}</span>
+                        </div>
+                        {hasSpecificAvailabilities && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                Disponibilités spécifiques existantes
+                            </span>
+                        )}
+                    </div>
+                    {workweek.find(w => w.week === currentWeek) && (
+                        <div className="text-sm text-blue-600">
+                            {workweek.find(w => w.week === currentWeek)?.hours}h prévues cette semaine
+                        </div>
                     )}
-                </span>
-                {hasSpecificAvailabilities && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        Disponibilités spécifiques existantes
-                    </span>
-                )}
+                </div>
             </div>
         </div>
     );
 }
 
-function WeekIndicator({ availabilities }: { availabilities: any }) {
+function getDateOfISOWeek(week: number) {
+    const date = new Date();
+    const currentYear = date.getFullYear();
+
+    // Si la semaine est inférieure à 31, c'est l'année suivante
+    const targetYear = week < 31 ? currentYear + 1 : currentYear;
+
+    // Créer une date au 1er janvier de l'année cible
+    date.setFullYear(targetYear, 0, 1);
+
+    // Obtenir le jour de la semaine (0 = dimanche, 1 = lundi, etc.)
+    const dayOffset = date.getDay() || 7;
+
+    // Calculer le nombre de jours jusqu'au lundi de la première semaine
+    const daysToFirstMonday = (8 - dayOffset) % 7;
+
+    // Ajouter les jours pour atteindre la semaine désirée
+    const daysToTargetWeek = (week - 1) * 7 + daysToFirstMonday;
+    date.setDate(1 + daysToTargetWeek);
+
+    return date;
+}
+
+function WeekIndicator({ availabilities, onWeekClick }: {
+    availabilities: any;
+    onWeekClick: (date: Date) => void;
+}) {
     const weeks = useMemo(() => {
         const currentYearWeeks: { week: number; count: number }[] = [];
         const nextYearWeeks: { week: number; count: number }[] = [];
@@ -180,21 +234,27 @@ function WeekIndicator({ availabilities }: { availabilities: any }) {
 
     if (weeks.length === 0) return null;
 
+    const handleWeekClick = (week: number) => {
+        const date = getDateOfISOWeek(week);
+        onWeekClick(date);
+    };
+
     return (
         <div className="mb-4 p-4 bg-gray-50 rounded-lg">
             <h3 className="text-sm font-medium text-gray-700 mb-2">Semaines avec disponibilités spécifiques :</h3>
             <div className="flex flex-wrap gap-2">
                 {weeks.map(({ week, count }, index) => (
-                    <div
+                    <button
                         key={week}
-                        className={`px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm flex items-center gap-1 ${week < 31 && weeks[index - 1]?.week >= 31 ? 'ml-6' : ''
+                        onClick={() => handleWeekClick(week)}
+                        className={`px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm flex items-center gap-1 hover:bg-blue-200 transition-colors ${week < 31 && weeks[index - 1]?.week >= 31 ? 'ml-6' : ''
                             }`}
                     >
                         <span>S{week}</span>
                         <span className="bg-blue-200 text-blue-900 px-1.5 py-0.5 rounded-full text-xs">
                             {count}
                         </span>
-                    </div>
+                    </button>
                 ))}
             </div>
         </div>
@@ -215,6 +275,7 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
         calendar: null as any
     });
     const [isRecurrent, setIsRecurrent] = useState(false);
+    const calendarRef = useRef<any>(null);
 
     const analysis = useMemo(() => {
         return analyzeAvailabilities(availabilities, workweek);
@@ -473,36 +534,33 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
         return availabilities[weekKey] && availabilities[weekKey].length > 0;
     }, [availabilities, currentWeek]);
 
+    const handleWeekClick = useCallback((date: Date) => {
+        if (calendarRef.current) {
+            const calendar = calendarRef.current.getApi();
+            calendar.gotoDate(date);
+        }
+    }, []);
+
     return (
         <div className="space-y-6">
-            <WeekTypeSelector
+            <HeaderSection
                 isRecurrent={isRecurrent}
-                onChange={setIsRecurrent}
+                onRecurrentChange={setIsRecurrent}
                 hasSpecificAvailabilities={hasSpecificAvailabilities}
+                currentWeek={currentWeek}
+                workweek={workweek}
             />
 
-            <WeekIndicator availabilities={availabilities} />
+            <WeekIndicator
+                availabilities={availabilities}
+                onWeekClick={handleWeekClick}
+            />
 
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
                     {error}
                 </div>
             )}
-
-            {/* Indicateur de la semaine actuelle */}
-            <div className="flex items-center justify-between bg-blue-50 p-4 rounded-lg">
-                <div className="flex items-center gap-2">
-                    <span className="text-blue-700 font-medium">Semaine {currentWeek}</span>
-                    <span className="text-blue-600">
-                        ({new Date().getFullYear()})
-                    </span>
-                </div>
-                {workweek.find(w => w.week === currentWeek) && (
-                    <div className="text-sm text-blue-600">
-                        {workweek.find(w => w.week === currentWeek)?.hours}h prévues cette semaine
-                    </div>
-                )}
-            </div>
 
             {/* Avertissements pour les semaines manquantes */}
             {analysis.missingWeeks.length > 0 && (
@@ -558,6 +616,7 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
 
             <div className="h-[600px] bg-white p-4 rounded-lg shadow">
                 <FullCalendar
+                    ref={calendarRef}
                     plugins={[timeGridPlugin, interactionPlugin]}
                     initialView="timeGridWeek"
                     headerToolbar={{
