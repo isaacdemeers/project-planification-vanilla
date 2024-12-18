@@ -5,6 +5,8 @@ import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import frLocale from '@fullcalendar/core/locales/fr';
+import { analyzeAvailabilities, formatWeekWarning } from '@/lib/calendar-utils';
+import { AlertTriangle, AlertCircle } from 'lucide-react';
 
 interface CalendarEvent {
     title: string;
@@ -137,8 +139,10 @@ function WeekTypeSelector({ isRecurrent, onChange }: {
 export default function IntervenantCalendar({ intervenantId }: { intervenantId: string }) {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [availabilities, setAvailabilities] = useState<any>({});
+    const [workweek, setWorkweek] = useState<any[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+    const [currentWeek, setCurrentWeek] = useState<number>(0);
     const academicYear = useMemo(() => getAcademicYearDates(), []);
     const [deleteModal, setDeleteModal] = useState({
         isOpen: false,
@@ -146,6 +150,10 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
         calendar: null as any
     });
     const [isRecurrent, setIsRecurrent] = useState(false);
+
+    const analysis = useMemo(() => {
+        return analyzeAvailabilities(availabilities, workweek);
+    }, [availabilities, workweek]);
 
     const generateRecurringEvents = useMemo(() => (slot: any, weekKey: string) => {
         const events: CalendarEvent[] = [];
@@ -343,6 +351,7 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
                 if (!response.ok) throw new Error('Failed to fetch availabilities');
                 const data = await response.json();
                 setAvailabilities(data.availabilities || {});
+                setWorkweek(data.workweek || []);
                 setLastUpdate(data.last_availability_update);
             } catch (error) {
                 console.error('Error fetching availabilities:', error);
@@ -386,6 +395,13 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
         return arg.text;
     }, [isRecurrent]);
 
+    // Ajouter un gestionnaire pour les changements de dates
+    const handleDatesSet = useCallback((arg: any) => {
+        const date = new Date(arg.start);
+        const weekNum = getWeekNumber(date);
+        setCurrentWeek(weekNum);
+    }, []);
+
     return (
         <div className="space-y-6">
             <WeekTypeSelector
@@ -397,6 +413,65 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
                     {error}
                 </div>
             )}
+
+            {/* Indicateur de la semaine actuelle */}
+            <div className="flex items-center justify-between bg-blue-50 p-4 rounded-lg">
+                <div className="flex items-center gap-2">
+                    <span className="text-blue-700 font-medium">Semaine {currentWeek}</span>
+                    <span className="text-blue-600">
+                        ({new Date().getFullYear()})
+                    </span>
+                </div>
+                {workweek.find(w => w.week === currentWeek) && (
+                    <div className="text-sm text-blue-600">
+                        {workweek.find(w => w.week === currentWeek)?.hours}h prévues cette semaine
+                    </div>
+                )}
+            </div>
+
+            {/* Avertissements pour les semaines manquantes */}
+            {analysis.missingWeeks.length > 0 && (
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                    <div className="flex items-center">
+                        <AlertTriangle className="h-5 w-5 text-yellow-400 mr-2" />
+                        <h3 className="text-sm font-medium text-yellow-800">
+                            Semaines sans disponibilité
+                        </h3>
+                    </div>
+                    <div className="mt-2 text-sm text-yellow-700">
+                        <ul className="list-disc pl-5 space-y-1">
+                            {analysis.missingWeeks.map(week => (
+                                <li key={week.week}>
+                                    Semaine {week.week} ({formatWeekWarning(week.week)}) - {week.hours}h prévues
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            )}
+
+            {/* Avertissements pour les heures insuffisantes */}
+            {analysis.insufficientHours.length > 0 && (
+                <div className="bg-orange-50 border-l-4 border-orange-400 p-4">
+                    <div className="flex items-center">
+                        <AlertCircle className="h-5 w-5 text-orange-400 mr-2" />
+                        <h3 className="text-sm font-medium text-orange-800">
+                            Disponibilités insuffisantes
+                        </h3>
+                    </div>
+                    <div className="mt-2 text-sm text-orange-700">
+                        <ul className="list-disc pl-5 space-y-1">
+                            {analysis.insufficientHours.map(week => (
+                                <li key={week.week}>
+                                    Semaine {week.week} ({formatWeekWarning(week.week)}) -
+                                    {week.available.toFixed(1)}h disponibles sur {week.required}h requises
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            )}
+
             {lastUpdate && (
                 <div className="text-sm text-gray-600">
                     Dernière modification : {new Date(lastUpdate).toLocaleString('fr-FR', {
@@ -405,6 +480,7 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
                     })}
                 </div>
             )}
+
             <div className="h-[600px] bg-white p-4 rounded-lg shadow">
                 <FullCalendar
                     plugins={[timeGridPlugin, interactionPlugin]}
@@ -448,6 +524,7 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
                         omitCommas: true
                     }}
                     dayHeaderFormatter={formatDayHeader}
+                    datesSet={handleDatesSet}
                 />
             </div>
 

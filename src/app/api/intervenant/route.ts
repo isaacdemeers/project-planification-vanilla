@@ -12,6 +12,7 @@ async function ensureTableExists() {
                 name VARCHAR(255) NOT NULL,
                 lastname VARCHAR(255) NOT NULL,
                 availabilities JSONB NOT NULL DEFAULT '{}',
+                workweek JSONB NOT NULL DEFAULT '[]',
                 email VARCHAR(255) NOT NULL UNIQUE,
                 connect_key UUID NOT NULL DEFAULT gen_random_uuid(),
                 connect_key_created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -19,6 +20,18 @@ async function ensureTableExists() {
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
+
+            -- Ajouter la colonne workweek si elle n'existe pas
+            DO $$ 
+            BEGIN 
+                BEGIN
+                    ALTER TABLE "Intervenant" 
+                    ADD COLUMN workweek JSONB NOT NULL DEFAULT '[]';
+                EXCEPTION 
+                    WHEN duplicate_column THEN 
+                        NULL;
+                END;
+            END $$;
 
             -- Ajouter la colonne last_availability_update si elle n'existe pas
             DO $$ 

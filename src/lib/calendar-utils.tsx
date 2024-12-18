@@ -195,3 +195,69 @@ export function convertAvailabilitiesToEvents(availabilities: AvailabilityPeriod
 
     return events;
 }
+
+interface WorkWeek {
+    week: number;
+    hours: number;
+}
+
+interface AvailabilityAnalysis {
+    missingWeeks: WorkWeek[];
+    insufficientHours: {
+        week: number;
+        required: number;
+        available: number;
+    }[];
+}
+
+export function analyzeAvailabilities(availabilities: AvailabilityPeriod, workweek: WorkWeek[]): AvailabilityAnalysis {
+    const analysis: AvailabilityAnalysis = {
+        missingWeeks: [],
+        insufficientHours: []
+    };
+
+    // Parcourir chaque semaine de travail
+    workweek.forEach(weekData => {
+        const weekKey = `S${weekData.week}`;
+        const weekAvailabilities = availabilities[weekKey] || [];
+
+        if (weekAvailabilities.length === 0) {
+            // Aucune disponibilité pour cette semaine
+            analysis.missingWeeks.push(weekData);
+        } else {
+            // Calculer le total d'heures disponibles pour cette semaine
+            let totalHours = 0;
+            weekAvailabilities.forEach(slot => {
+                const [fromHours, fromMinutes] = slot.from.split(':').map(Number);
+                const [toHours, toMinutes] = slot.to.split(':').map(Number);
+                const hours = toHours - fromHours + (toMinutes - fromMinutes) / 60;
+                totalHours += hours;
+            });
+
+            if (totalHours < weekData.hours) {
+                analysis.insufficientHours.push({
+                    week: weekData.week,
+                    required: weekData.hours,
+                    available: totalHours
+                });
+            }
+        }
+    });
+
+    return analysis;
+}
+
+export function formatWeekWarning(weekNumber: number): string {
+    const date = new Date();
+    const year = date.getFullYear();
+    const firstDayOfYear = new Date(year, 0, 1);
+    const dayOffset = firstDayOfYear.getDay() || 7;
+    firstDayOfYear.setDate(firstDayOfYear.getDate() + (1 - dayOffset));
+    const weekDate = new Date(firstDayOfYear);
+    weekDate.setDate(weekDate.getDate() + (weekNumber - 1) * 7);
+
+    return new Intl.DateTimeFormat('fr-FR', {
+        day: 'numeric',
+        month: 'long'
+    }).format(weekDate);
+}
