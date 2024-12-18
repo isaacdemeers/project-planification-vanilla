@@ -138,6 +138,7 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [availabilities, setAvailabilities] = useState<any>({});
     const [error, setError] = useState<string | null>(null);
+    const [lastUpdate, setLastUpdate] = useState<string | null>(null);
     const academicYear = useMemo(() => getAcademicYearDates(), []);
     const [deleteModal, setDeleteModal] = useState({
         isOpen: false,
@@ -342,6 +343,7 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
                 if (!response.ok) throw new Error('Failed to fetch availabilities');
                 const data = await response.json();
                 setAvailabilities(data.availabilities || {});
+                setLastUpdate(data.last_availability_update);
             } catch (error) {
                 console.error('Error fetching availabilities:', error);
                 setError('Erreur lors du chargement des disponibilités');
@@ -393,6 +395,14 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
                     {error}
+                </div>
+            )}
+            {lastUpdate && (
+                <div className="text-sm text-gray-600">
+                    Dernière modification : {new Date(lastUpdate).toLocaleString('fr-FR', {
+                        dateStyle: 'long',
+                        timeStyle: 'short'
+                    })}
                 </div>
             )}
             <div className="h-[600px] bg-white p-4 rounded-lg shadow">

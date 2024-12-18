@@ -6,30 +6,30 @@ export async function GET() {
         const client = await db.connect();
         try {
             const result = await client.query(
-                'SELECT name, lastname, availabilities FROM "Intervenant"'
+                'SELECT name, lastname, availabilities, last_availability_update FROM "Intervenant"'
             );
 
             // Formater les données selon le format demandé
-            const formattedData = result.rows.reduce((acc: any, intervenant) => {
-                const intervenantName = `${intervenant.name} ${intervenant.lastname}`;
+            const formattedData = {
+                export_date: new Date().toISOString(),
+                intervenants: result.rows.reduce((acc: any, intervenant) => {
+                    const intervenantName = `${intervenant.name} ${intervenant.lastname}`;
 
-                // Si les disponibilités sont vides, ne pas inclure l'intervenant
-                if (!intervenant.availabilities || Object.keys(intervenant.availabilities).length === 0) {
+                    // Si les disponibilités sont vides, ne pas inclure l'intervenant
+                    if (!intervenant.availabilities || Object.keys(intervenant.availabilities).length === 0) {
+                        return acc;
+                    }
+
+                    acc[intervenantName] = {
+                        availabilities: intervenant.availabilities.default
+                            ? intervenant.availabilities
+                            : Object.values(intervenant.availabilities).flat().filter(Boolean),
+                        last_update: intervenant.last_availability_update
+                    };
+
                     return acc;
-                }
-
-                // Si les disponibilités ont une structure "default", garder la structure
-                if (intervenant.availabilities.default) {
-                    acc[intervenantName] = intervenant.availabilities;
-                } else {
-                    // Sinon, mettre les disponibilités directement dans un tableau
-                    acc[intervenantName] = Object.values(intervenant.availabilities)
-                        .flat()
-                        .filter(Boolean);
-                }
-
-                return acc;
-            }, {});
+                }, {})
+            };
 
             return NextResponse.json(formattedData);
         } finally {

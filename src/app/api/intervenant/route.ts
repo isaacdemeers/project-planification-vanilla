@@ -6,6 +6,7 @@ async function ensureTableExists() {
     try {
         const client = await db.connect();
         await client.query(`
+            -- Créer la table si elle n'existe pas
             CREATE TABLE IF NOT EXISTS "Intervenant" (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 name VARCHAR(255) NOT NULL,
@@ -18,6 +19,23 @@ async function ensureTableExists() {
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
+
+            -- Ajouter la colonne last_availability_update si elle n'existe pas
+            DO $$ 
+            BEGIN 
+                BEGIN
+                    ALTER TABLE "Intervenant" 
+                    ADD COLUMN last_availability_update TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+                EXCEPTION 
+                    WHEN duplicate_column THEN 
+                        NULL;
+                END;
+            END $$;
+
+            -- Mettre à jour les enregistrements existants qui n'ont pas de date de dernière modification
+            UPDATE "Intervenant"
+            SET last_availability_update = CURRENT_TIMESTAMP
+            WHERE last_availability_update IS NULL;
         `);
         client.release();
     } catch (error) {
