@@ -151,6 +151,56 @@ function WeekTypeSelector({ isRecurrent, onChange, hasSpecificAvailabilities }: 
     );
 }
 
+function WeekIndicator({ availabilities }: { availabilities: any }) {
+    const weeks = useMemo(() => {
+        const currentYearWeeks: { week: number; count: number }[] = [];
+        const nextYearWeeks: { week: number; count: number }[] = [];
+
+        Object.keys(availabilities)
+            .filter(key => key !== 'default')
+            .forEach(key => {
+                const week = parseInt(key.substring(1));
+                const weekData = {
+                    week,
+                    count: availabilities[key].length
+                };
+
+                if (week >= 31) {
+                    currentYearWeeks.push(weekData);
+                } else {
+                    nextYearWeeks.push(weekData);
+                }
+            });
+
+        return [
+            ...currentYearWeeks.sort((a, b) => a.week - b.week),
+            ...nextYearWeeks.sort((a, b) => a.week - b.week)
+        ];
+    }, [availabilities]);
+
+    if (weeks.length === 0) return null;
+
+    return (
+        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Semaines avec disponibilités spécifiques :</h3>
+            <div className="flex flex-wrap gap-2">
+                {weeks.map(({ week, count }, index) => (
+                    <div
+                        key={week}
+                        className={`px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm flex items-center gap-1 ${week < 31 && weeks[index - 1]?.week >= 31 ? 'ml-6' : ''
+                            }`}
+                    >
+                        <span>S{week}</span>
+                        <span className="bg-blue-200 text-blue-900 px-1.5 py-0.5 rounded-full text-xs">
+                            {count}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 export default function IntervenantCalendar({ intervenantId }: { intervenantId: string }) {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [availabilities, setAvailabilities] = useState<any>({});
@@ -430,6 +480,9 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
                 onChange={setIsRecurrent}
                 hasSpecificAvailabilities={hasSpecificAvailabilities}
             />
+
+            <WeekIndicator availabilities={availabilities} />
+
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
                     {error}
