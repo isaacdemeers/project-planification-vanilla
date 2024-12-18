@@ -111,27 +111,42 @@ function DeleteModal({ isOpen, onClose, onConfirm }: DeleteModalProps) {
     );
 }
 
-function WeekTypeSelector({ isRecurrent, onChange }: {
+function WeekTypeSelector({ isRecurrent, onChange, hasSpecificAvailabilities }: {
     isRecurrent: boolean;
     onChange: (isRecurrent: boolean) => void;
+    hasSpecificAvailabilities: boolean;
 }) {
     return (
         <div className="flex items-center gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
-            <input
-                type="checkbox"
-                id="weekType"
-                checked={isRecurrent}
-                onChange={(e) => onChange(e.target.checked)}
-                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-            />
-            <label htmlFor="weekType" className="text-sm text-gray-700">
-                Disponibilité récurrente
-            </label>
-            <span className="ml-2 text-xs text-gray-500">
-                {isRecurrent
-                    ? "Cette disponibilité sera appliquée à toutes les semaines"
-                    : "Cette disponibilité sera spécifique à la semaine sélectionnée"}
-            </span>
+            <div className="flex items-center gap-2">
+                <input
+                    type="checkbox"
+                    id="weekType"
+                    checked={isRecurrent}
+                    onChange={(e) => onChange(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 focus:ring-blue-500 text-blue-600 cursor-pointer"
+                />
+                <label
+                    htmlFor="weekType"
+                    className="text-sm text-gray-700"
+                >
+                    Disponibilité récurrente
+                </label>
+            </div>
+            <div className="ml-2 flex items-center gap-2">
+                <span className="text-xs text-gray-500">
+                    {isRecurrent ? (
+                        "Affichage des disponibilités récurrentes"
+                    ) : (
+                        "Affichage des disponibilités spécifiques à la semaine"
+                    )}
+                </span>
+                {hasSpecificAvailabilities && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Disponibilités spécifiques existantes
+                    </span>
+                )}
+            </div>
         </div>
     );
 }
@@ -402,11 +417,18 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
         setCurrentWeek(weekNum);
     }, []);
 
+    // Ajouter cette fonction pour vérifier les disponibilités spécifiques
+    const hasSpecificAvailabilities = useMemo(() => {
+        const weekKey = `S${currentWeek}`;
+        return availabilities[weekKey] && availabilities[weekKey].length > 0;
+    }, [availabilities, currentWeek]);
+
     return (
         <div className="space-y-6">
             <WeekTypeSelector
                 isRecurrent={isRecurrent}
                 onChange={setIsRecurrent}
+                hasSpecificAvailabilities={hasSpecificAvailabilities}
             />
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
@@ -463,7 +485,7 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
                         <ul className="list-disc pl-5 space-y-1">
                             {analysis.insufficientHours.map(week => (
                                 <li key={week.week}>
-                                    Semaine {week.week} ({formatWeekWarning(week.week)}) -
+                                    Semaine {week.week} ({formatWeekWarning(week.week)}) <span className="w-4"></span>
                                     {week.available.toFixed(1)}h disponibles sur {week.required}h requises
                                 </li>
                             ))}
