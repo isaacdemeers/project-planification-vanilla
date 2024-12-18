@@ -5,6 +5,7 @@ import AddIntervenant from '@/components/crud/add';
 import IntervenantsList from '@/components/crud/read';
 import KeyValiditySettings from '@/components/settings/key-validity';
 import IntervenantCalendar from '@/components/calendar/intervenant-calendar';
+import ImportWorkweek from '@/components/workweek/import-workweek';
 import { Download } from 'lucide-react';
 
 export default function Dashboard() {
@@ -46,13 +47,16 @@ export default function Dashboard() {
                             Gérez les intervenants et leurs disponibilités
                         </p>
                     </div>
-                    <button
-                        onClick={handleExportJSON}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                    >
-                        <Download size={20} />
-                        Exporter JSON
-                    </button>
+                    <div className="flex gap-4">
+                        <ImportWorkweek />
+                        <button
+                            onClick={handleExportJSON}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                        >
+                            <Download size={20} />
+                            Exporter JSON
+                        </button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-8">

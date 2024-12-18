@@ -220,18 +220,25 @@ export function analyzeAvailabilities(availabilities: AvailabilityPeriod, workwe
     workweek.forEach(weekData => {
         const weekKey = `S${weekData.week}`;
         const weekAvailabilities = availabilities[weekKey] || [];
+        const defaultAvailabilities = availabilities['default'] || [];
 
-        if (weekAvailabilities.length === 0) {
+        // Si pas de disponibilités spécifiques, utiliser les disponibilités récurrentes
+        const effectiveAvailabilities = weekAvailabilities.length > 0 ? weekAvailabilities : defaultAvailabilities;
+
+        if (effectiveAvailabilities.length === 0) {
             // Aucune disponibilité pour cette semaine
             analysis.missingWeeks.push(weekData);
         } else {
             // Calculer le total d'heures disponibles pour cette semaine
             let totalHours = 0;
-            weekAvailabilities.forEach(slot => {
+            effectiveAvailabilities.forEach(slot => {
                 const [fromHours, fromMinutes] = slot.from.split(':').map(Number);
                 const [toHours, toMinutes] = slot.to.split(':').map(Number);
                 const hours = toHours - fromHours + (toMinutes - fromMinutes) / 60;
-                totalHours += hours;
+
+                // Si le créneau est défini pour plusieurs jours, multiplier les heures
+                const daysCount = slot.days.split(',').length;
+                totalHours += hours * daysCount;
             });
 
             if (totalHours < weekData.hours) {
