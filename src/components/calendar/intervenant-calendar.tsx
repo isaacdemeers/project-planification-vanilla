@@ -148,13 +148,36 @@ function DeleteModal({ isOpen, onClose, onConfirm }: DeleteModalProps) {
     );
 }
 
+function calculateAvailableHours(availabilities: Availability[]): number {
+    return availabilities.reduce((total, slot) => {
+        const [fromHours, fromMinutes] = slot.from.split(':').map(Number);
+        const [toHours, toMinutes] = slot.to.split(':').map(Number);
+        const hours = toHours - fromHours + (toMinutes - fromMinutes) / 60;
+        const daysCount = slot.days.split(',').length;
+        return total + (hours * daysCount);
+    }, 0);
+}
+
 function HeaderSection({
     isRecurrent,
     onRecurrentChange,
     hasSpecificAvailabilities,
     currentWeek,
-    workweek
-}: HeaderSectionProps) {
+    workweek,
+    availabilities
+}: HeaderSectionProps & { availabilities: AvailabilityPeriod }) {
+    const weekKey = `S${currentWeek}`;
+    const availableHours = useMemo(() => {
+        const weekAvailabilities = availabilities[weekKey];
+        if (weekAvailabilities && weekAvailabilities.length > 0) {
+            return calculateAvailableHours(weekAvailabilities);
+        }
+        if (availabilities.default) {
+            return calculateAvailableHours(availabilities.default);
+        }
+        return 0;
+    }, [availabilities, weekKey]);
+
     return (
         <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex flex-col gap-4">
@@ -199,11 +222,16 @@ function HeaderSection({
                             </span>
                         )}
                     </div>
-                    {workweek.find(w => w.week === currentWeek) && (
-                        <div className="text-sm text-blue-600">
-                            {workweek.find(w => w.week === currentWeek)?.hours}h prévues cette semaine
+                    <div className="flex items-center gap-4 text-sm">
+                        <div className="text-blue-600">
+                            {availableHours.toFixed(1)}h disponibles
                         </div>
-                    )}
+                        {workweek.find(w => w.week === currentWeek) && (
+                            <div className="text-blue-600">
+                                {workweek.find(w => w.week === currentWeek)?.hours}h prévues
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
@@ -437,6 +465,7 @@ export default function IntervenantCalendar({ intervenantId }: CalendarProps) {
                 hasSpecificAvailabilities={hasSpecificAvailabilities}
                 currentWeek={currentWeek}
                 workweek={workweek}
+                availabilities={availabilities}
             />
 
             <WeekIndicator
