@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import frLocale from '@fullcalendar/core/locales/fr';
+import { analyzeAvailabilities, formatWeekWarning } from '@/lib/calendar-utils';
+import { AlertTriangle, AlertCircle } from 'lucide-react';
 
 interface CalendarEvent {
     title: string;
@@ -109,27 +111,153 @@ function DeleteModal({ isOpen, onClose, onConfirm }: DeleteModalProps) {
     );
 }
 
-function WeekTypeSelector({ isRecurrent, onChange }: {
+function HeaderSection({
+    isRecurrent,
+    onRecurrentChange,
+    hasSpecificAvailabilities,
+    currentWeek,
+    workweek
+}: {
     isRecurrent: boolean;
-    onChange: (isRecurrent: boolean) => void;
+    onRecurrentChange: (value: boolean) => void;
+    hasSpecificAvailabilities: boolean;
+    currentWeek: number;
+    workweek: any[];
 }) {
     return (
-        <div className="flex items-center gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
-            <input
-                type="checkbox"
-                id="weekType"
-                checked={isRecurrent}
-                onChange={(e) => onChange(e.target.checked)}
-                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-            />
-            <label htmlFor="weekType" className="text-sm text-gray-700">
-                Disponibilité récurrente
-            </label>
-            <span className="ml-2 text-xs text-gray-500">
-                {isRecurrent
-                    ? "Cette disponibilité sera appliquée à toutes les semaines"
-                    : "Cette disponibilité sera spécifique à la semaine sélectionnée"}
-            </span>
+        <div className="bg-gray-50 rounded-lg p-4">
+            <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex bg-white rounded-lg p-1 shadow-sm">
+                        <button
+                            onClick={() => onRecurrentChange(false)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!isRecurrent
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'text-gray-600 hover:text-gray-800'
+                                }`}
+                        >
+                            Mode spécifique
+                        </button>
+                        <button
+                            onClick={() => onRecurrentChange(true)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isRecurrent
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'text-gray-600 hover:text-gray-800'
+                                }`}
+                        >
+                            Mode récurrent
+                        </button>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                        {isRecurrent ? (
+                            "Les disponibilités seront appliquées à toutes les semaines"
+                        ) : (
+                            "Les disponibilités seront spécifiques à la semaine sélectionnée"
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between border-t pt-4">
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
+                            <span className="text-blue-700 font-medium">Semaine {currentWeek}</span>
+                        </div>
+                        {hasSpecificAvailabilities && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                Disponibilités spécifiques existantes
+                            </span>
+                        )}
+                    </div>
+                    {workweek.find(w => w.week === currentWeek) && (
+                        <div className="text-sm text-blue-600">
+                            {workweek.find(w => w.week === currentWeek)?.hours}h prévues cette semaine
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function getDateOfISOWeek(week: number) {
+    const date = new Date();
+    const currentYear = date.getFullYear();
+
+    // Si la semaine est inférieure à 31, c'est l'année suivante
+    const targetYear = week < 31 ? currentYear + 1 : currentYear;
+
+    // Ajuster la semaine si elle est supérieure à 52
+    const adjustedWeek = week > 52 ? week - 1 : week;
+
+    // Créer une date au 1er janvier de l'année cible
+    const firstDayOfYear = new Date(targetYear, 0, 1);
+
+    // Ajuster au lundi de la première semaine de l'année
+    const firstMonday = new Date(firstDayOfYear);
+    firstMonday.setDate(firstDayOfYear.getDate() + (8 - firstDayOfYear.getDay()) % 7);
+
+    // Calculer la date du lundi de la semaine désirée
+    const targetDate = new Date(firstMonday);
+    targetDate.setDate(firstMonday.getDate() + (adjustedWeek - 1) * 7);
+
+    return targetDate;
+}
+
+function WeekIndicator({ availabilities, onWeekClick }: {
+    availabilities: any;
+    onWeekClick: (date: Date) => void;
+}) {
+    const weeks = useMemo(() => {
+        const currentYearWeeks: { week: number; count: number }[] = [];
+        const nextYearWeeks: { week: number; count: number }[] = [];
+
+        Object.keys(availabilities)
+            .filter(key => key !== 'default')
+            .forEach(key => {
+                const week = parseInt(key.substring(1));
+                const weekData = {
+                    week,
+                    count: availabilities[key].length
+                };
+
+                if (week >= 31) {
+                    currentYearWeeks.push(weekData);
+                } else {
+                    nextYearWeeks.push(weekData);
+                }
+            });
+
+        return [
+            ...currentYearWeeks.sort((a, b) => a.week - b.week),
+            ...nextYearWeeks.sort((a, b) => a.week - b.week)
+        ];
+    }, [availabilities]);
+
+    if (weeks.length === 0) return null;
+
+    const handleWeekClick = (week: number) => {
+        const date = getDateOfISOWeek(week);
+        onWeekClick(date);
+    };
+
+    return (
+        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Semaines avec disponibilités spécifiques :</h3>
+            <div className="flex flex-wrap gap-2">
+                {weeks.map(({ week, count }, index) => (
+                    <button
+                        key={week}
+                        onClick={() => handleWeekClick(week)}
+                        className={`px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm flex items-center gap-1 hover:bg-blue-200 transition-colors ${week < 31 && weeks[index - 1]?.week >= 31 ? 'ml-6' : ''
+                            }`}
+                    >
+                        <span>S{week}</span>
+                        <span className="bg-blue-200 text-blue-900 px-1.5 py-0.5 rounded-full text-xs">
+                            {count}
+                        </span>
+                    </button>
+                ))}
+            </div>
         </div>
     );
 }
@@ -137,7 +265,10 @@ function WeekTypeSelector({ isRecurrent, onChange }: {
 export default function IntervenantCalendar({ intervenantId }: { intervenantId: string }) {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [availabilities, setAvailabilities] = useState<any>({});
+    const [workweek, setWorkweek] = useState<any[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+    const [currentWeek, setCurrentWeek] = useState<number>(0);
     const academicYear = useMemo(() => getAcademicYearDates(), []);
     const [deleteModal, setDeleteModal] = useState({
         isOpen: false,
@@ -145,6 +276,11 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
         calendar: null as any
     });
     const [isRecurrent, setIsRecurrent] = useState(false);
+    const calendarRef = useRef<any>(null);
+
+    const analysis = useMemo(() => {
+        return analyzeAvailabilities(availabilities, workweek);
+    }, [availabilities, workweek]);
 
     const generateRecurringEvents = useMemo(() => (slot: any, weekKey: string) => {
         const events: CalendarEvent[] = [];
@@ -342,6 +478,8 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
                 if (!response.ok) throw new Error('Failed to fetch availabilities');
                 const data = await response.json();
                 setAvailabilities(data.availabilities || {});
+                setWorkweek(data.workweek || []);
+                setLastUpdate(data.last_availability_update);
             } catch (error) {
                 console.error('Error fetching availabilities:', error);
                 setError('Erreur lors du chargement des disponibilités');
@@ -384,19 +522,102 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
         return arg.text;
     }, [isRecurrent]);
 
+    // Ajouter un gestionnaire pour les changements de dates
+    const handleDatesSet = useCallback((arg: any) => {
+        const date = new Date(arg.start);
+        const weekNum = getWeekNumber(date);
+        setCurrentWeek(weekNum);
+    }, []);
+
+    // Ajouter cette fonction pour vérifier les disponibilités spécifiques
+    const hasSpecificAvailabilities = useMemo(() => {
+        const weekKey = `S${currentWeek}`;
+        return availabilities[weekKey] && availabilities[weekKey].length > 0;
+    }, [availabilities, currentWeek]);
+
+    const handleWeekClick = useCallback((date: Date) => {
+        if (calendarRef.current) {
+            const calendar = calendarRef.current.getApi();
+            calendar.gotoDate(date);
+        }
+    }, []);
+
     return (
         <div className="space-y-6">
-            <WeekTypeSelector
+            <HeaderSection
                 isRecurrent={isRecurrent}
-                onChange={setIsRecurrent}
+                onRecurrentChange={setIsRecurrent}
+                hasSpecificAvailabilities={hasSpecificAvailabilities}
+                currentWeek={currentWeek}
+                workweek={workweek}
             />
+
+            <WeekIndicator
+                availabilities={availabilities}
+                onWeekClick={handleWeekClick}
+            />
+
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
                     {error}
                 </div>
             )}
+
+            {/* Avertissements pour les semaines manquantes */}
+            {analysis.missingWeeks.length > 0 && (
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                    <div className="flex items-center">
+                        <AlertTriangle className="h-5 w-5 text-yellow-400 mr-2" />
+                        <h3 className="text-sm font-medium text-yellow-800">
+                            Semaines sans disponibilité
+                        </h3>
+                    </div>
+                    <div className="mt-2 text-sm text-yellow-700">
+                        <ul className="list-disc pl-5 space-y-1">
+                            {analysis.missingWeeks.map(week => (
+                                <li key={week.week}>
+                                    Semaine {week.week} ({formatWeekWarning(week.week)}) - {week.hours}h prévues
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            )}
+
+            {/* Avertissements pour les heures insuffisantes */}
+            {analysis.insufficientHours.length > 0 && (
+                <div className="bg-orange-50 border-l-4 border-orange-400 p-4">
+                    <div className="flex items-center">
+                        <AlertCircle className="h-5 w-5 text-orange-400 mr-2" />
+                        <h3 className="text-sm font-medium text-orange-800">
+                            Disponibilités insuffisantes
+                        </h3>
+                    </div>
+                    <div className="mt-2 text-sm text-orange-700">
+                        <ul className="list-disc pl-5 space-y-1">
+                            {analysis.insufficientHours.map(week => (
+                                <li key={week.week}>
+                                    Semaine {week.week} ({formatWeekWarning(week.week)}) <span className="w-4"></span>
+                                    {week.available.toFixed(1)}h disponibles sur {week.required}h requises
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            )}
+
+            {lastUpdate && (
+                <div className="text-sm text-gray-600">
+                    Dernière modification : {new Date(lastUpdate).toLocaleString('fr-FR', {
+                        dateStyle: 'long',
+                        timeStyle: 'short'
+                    })}
+                </div>
+            )}
+
             <div className="h-[600px] bg-white p-4 rounded-lg shadow">
                 <FullCalendar
+                    ref={calendarRef}
                     plugins={[timeGridPlugin, interactionPlugin]}
                     initialView="timeGridWeek"
                     headerToolbar={{
@@ -438,6 +659,7 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
                         omitCommas: true
                     }}
                     dayHeaderFormatter={formatDayHeader}
+                    datesSet={handleDatesSet}
                 />
             </div>
 

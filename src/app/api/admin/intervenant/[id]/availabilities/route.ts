@@ -42,13 +42,28 @@ export async function PUT(
         const client = await db.connect();
 
         try {
-            const result = await client.query(
-                `UPDATE "Intervenant"
-                 SET availabilities = $1
-                 WHERE id = $2
-                 RETURNING *`,
-                [availabilities, params.id]
-            );
+            // Vérifier si la colonne existe
+            const columnExists = await client.query(`
+                SELECT EXISTS (
+                    SELECT FROM information_schema.columns 
+                    WHERE table_name = 'Intervenant' 
+                    AND column_name = 'last_availability_update'
+                );
+            `);
+
+            // Construire la requête en fonction de l'existence de la colonne
+            const updateQuery = columnExists.rows[0].exists
+                ? `UPDATE "Intervenant"
+                   SET availabilities = $1,
+                       last_availability_update = CURRENT_TIMESTAMP
+                   WHERE id = $2
+                   RETURNING *`
+                : `UPDATE "Intervenant"
+                   SET availabilities = $1
+                   WHERE id = $2
+                   RETURNING *`;
+
+            const result = await client.query(updateQuery, [availabilities, params.id]);
 
             if (result.rowCount === 0) {
                 return NextResponse.json(

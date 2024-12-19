@@ -52,7 +52,7 @@ export default function RegisterForm() {
                         id="name"
                         name="name"
                         required
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"
                     />
                 </div>
                 <div>
@@ -64,7 +64,7 @@ export default function RegisterForm() {
                         id="email"
                         name="email"
                         required
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"
                     />
                 </div>
                 <div>
@@ -76,7 +76,7 @@ export default function RegisterForm() {
                         id="password"
                         name="password"
                         required
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"
                     />
                 </div>
                 <button
