@@ -60,6 +60,7 @@ interface HeaderSectionProps {
 interface WeekIndicatorProps {
     availabilities: AvailabilityPeriod;
     onWeekClick: (date: Date) => void;
+    onModeChange: (isRecurrent: boolean) => void;
 }
 
 function getAcademicYearDates() {
@@ -228,7 +229,7 @@ function getDateOfISOWeek(week: number) {
     return targetDate;
 }
 
-function WeekIndicator({ availabilities, onWeekClick }: WeekIndicatorProps) {
+function WeekIndicator({ availabilities, onWeekClick, onModeChange }: WeekIndicatorProps) {
     const weeks = useMemo(() => {
         const currentYearWeeks: WeekData[] = [];
         const nextYearWeeks: WeekData[] = [];
@@ -252,12 +253,17 @@ function WeekIndicator({ availabilities, onWeekClick }: WeekIndicatorProps) {
         return [...currentYearWeeks.sort((a, b) => a.week - b.week), ...nextYearWeeks.sort((a, b) => a.week - b.week)];
     }, [availabilities]);
 
+    const handleWeekClick = (week: number) => {
+        onModeChange(false); // Passer en mode spécifique
+        onWeekClick(getDateOfISOWeek(week));
+    };
+
     return (
         <div className="flex flex-wrap gap-2">
             {weeks.map(({ week, count }) => (
                 <button
                     key={week}
-                    onClick={() => onWeekClick(getDateOfISOWeek(week))}
+                    onClick={() => handleWeekClick(week)}
                     className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200"
                 >
                     S{week} ({count})
@@ -440,6 +446,7 @@ export default function IntervenantCalendar({ intervenantId }: CalendarProps) {
                         calendarRef.current.getApi().gotoDate(date);
                     }
                 }}
+                onModeChange={setIsRecurrent}
             />
 
             <div className="bg-white rounded-lg shadow">
