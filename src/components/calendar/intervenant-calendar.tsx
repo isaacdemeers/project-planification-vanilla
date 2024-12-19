@@ -132,8 +132,8 @@ function HeaderSection({
                         <button
                             onClick={() => onRecurrentChange(false)}
                             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!isRecurrent
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'text-gray-600 hover:text-gray-800'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'text-gray-600 hover:text-gray-800'
                                 }`}
                         >
                             Mode spécifique
@@ -141,8 +141,8 @@ function HeaderSection({
                         <button
                             onClick={() => onRecurrentChange(true)}
                             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isRecurrent
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'text-gray-600 hover:text-gray-800'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'text-gray-600 hover:text-gray-800'
                                 }`}
                         >
                             Mode récurrent
@@ -186,20 +186,21 @@ function getDateOfISOWeek(week: number) {
     // Si la semaine est inférieure à 31, c'est l'année suivante
     const targetYear = week < 31 ? currentYear + 1 : currentYear;
 
+    // Ajuster la semaine si elle est supérieure à 52
+    const adjustedWeek = week > 52 ? week - 1 : week;
+
     // Créer une date au 1er janvier de l'année cible
-    date.setFullYear(targetYear, 0, 1);
+    const firstDayOfYear = new Date(targetYear, 0, 1);
 
-    // Obtenir le jour de la semaine (0 = dimanche, 1 = lundi, etc.)
-    const dayOffset = date.getDay() || 7;
+    // Ajuster au lundi de la première semaine de l'année
+    const firstMonday = new Date(firstDayOfYear);
+    firstMonday.setDate(firstDayOfYear.getDate() + (8 - firstDayOfYear.getDay()) % 7);
 
-    // Calculer le nombre de jours jusqu'au lundi de la première semaine
-    const daysToFirstMonday = (8 - dayOffset) % 7;
+    // Calculer la date du lundi de la semaine désirée
+    const targetDate = new Date(firstMonday);
+    targetDate.setDate(firstMonday.getDate() + (adjustedWeek - 1) * 7);
 
-    // Ajouter les jours pour atteindre la semaine désirée
-    const daysToTargetWeek = (week - 1) * 7 + daysToFirstMonday;
-    date.setDate(1 + daysToTargetWeek);
-
-    return date;
+    return targetDate;
 }
 
 function WeekIndicator({ availabilities, onWeekClick }: {
