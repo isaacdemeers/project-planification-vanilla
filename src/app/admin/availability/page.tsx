@@ -9,6 +9,14 @@ import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { updateAvailabilities } from '@/lib/requests';
 import type { Intervenant } from '@/lib/requests';
 
+interface CalendarEvent {
+    title: string;
+    start: string;
+    end: string;
+    backgroundColor?: string;
+    borderColor?: string;
+}
+
 function IntervenantSelector({ intervenants, selectedId, onSelect }: {
     intervenants: Intervenant[];
     selectedId: string | null;
@@ -37,7 +45,7 @@ function IntervenantSelector({ intervenants, selectedId, onSelect }: {
 }
 
 export default function AdminAvailabilityPage() {
-    const [events, setEvents] = useState<any[]>([]);
+    const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [intervenant, setIntervenant] = useState<Intervenant | null>(null);
     const [intervenants, setIntervenants] = useState<Intervenant[]>([]);
     const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -81,11 +89,11 @@ export default function AdminAvailabilityPage() {
         }
     }, []);
 
-    const handleAvailabilityChange = useCallback(async (updateFn: (prev: any) => any) => {
+    const handleAvailabilityChange = useCallback(async (updateFn: (prev: AvailabilityPeriod) => AvailabilityPeriod) => {
         if (!intervenant) return;
 
         try {
-            const newAvailabilities = updateFn(intervenant.availabilities);
+            const newAvailabilities = updateFn(intervenant.availabilities as AvailabilityPeriod);
             const validatedAvailabilities = validateAndCleanAvailabilities(newAvailabilities);
             const updatedIntervenant = await updateAvailabilities(intervenant.id, validatedAvailabilities);
             setIntervenant(updatedIntervenant);
@@ -148,8 +156,8 @@ export default function AdminAvailabilityPage() {
                                     <button
                                         onClick={() => setDisplayMode('all')}
                                         className={`px-4 py-2 rounded-lg transition-colors ${displayMode === 'all'
-                                                ? 'bg-white text-blue-600 shadow-sm'
-                                                : 'text-gray-600 hover:text-gray-800'
+                                            ? 'bg-white text-blue-600 shadow-sm'
+                                            : 'text-gray-600 hover:text-gray-800'
                                             }`}
                                     >
                                         Tout
@@ -157,8 +165,8 @@ export default function AdminAvailabilityPage() {
                                     <button
                                         onClick={() => setDisplayMode('specific')}
                                         className={`px-4 py-2 rounded-lg transition-colors ${displayMode === 'specific'
-                                                ? 'bg-white text-blue-600 shadow-sm'
-                                                : 'text-gray-600 hover:text-gray-800'
+                                            ? 'bg-white text-blue-600 shadow-sm'
+                                            : 'text-gray-600 hover:text-gray-800'
                                             }`}
                                     >
                                         Spécifique
@@ -166,8 +174,8 @@ export default function AdminAvailabilityPage() {
                                     <button
                                         onClick={() => setDisplayMode('default')}
                                         className={`px-4 py-2 rounded-lg transition-colors ${displayMode === 'default'
-                                                ? 'bg-white text-blue-600 shadow-sm'
-                                                : 'text-gray-600 hover:text-gray-800'
+                                            ? 'bg-white text-blue-600 shadow-sm'
+                                            : 'text-gray-600 hover:text-gray-800'
                                             }`}
                                     >
                                         Par défaut

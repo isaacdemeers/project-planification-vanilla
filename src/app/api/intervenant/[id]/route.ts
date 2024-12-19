@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db.server';
 
+interface DatabaseError extends Error {
+    code?: string;
+}
+
 export async function PUT(
     request: Request,
     { params }: { params: { id: string } }
@@ -64,9 +68,9 @@ export async function PUT(
             }
 
             return NextResponse.json(result.rows[0]);
-        } catch (error: any) {
+        } catch (error) {
             console.error('Database error:', error);
-            if (error.code === '23505') {
+            if (error instanceof Error && 'code' in error && (error as DatabaseError).code === '23505') {
                 return NextResponse.json(
                     { error: 'Email already exists' },
                     { status: 400 }
@@ -76,10 +80,10 @@ export async function PUT(
         } finally {
             client.release();
         }
-    } catch (error: any) {
+    } catch (error) {
         console.error('Error in PUT:', error);
         return NextResponse.json(
-            { error: 'Failed to update intervenant', details: error.message },
+            { error: 'Failed to update intervenant', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }
@@ -106,16 +110,16 @@ export async function DELETE(
             }
 
             return NextResponse.json(result.rows[0]);
-        } catch (error: any) {
+        } catch (error: Error | unknown) {
             console.error('Database error:', error);
             throw error;
         } finally {
             client.release();
         }
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
         console.error('Error in DELETE:', error);
         return NextResponse.json(
-            { error: 'Failed to delete intervenant', details: error.message },
+            { error: 'Failed to delete intervenant', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }

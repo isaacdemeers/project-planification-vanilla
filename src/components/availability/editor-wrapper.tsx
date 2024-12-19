@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import JsonEditor from './json-editor';
 import { updateAvailabilities } from '@/lib/requests';
 

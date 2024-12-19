@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { updateIntervenant, type Intervenant } from '@/lib/requests';
 
 interface UpdateIntervenantProps {
@@ -30,8 +30,9 @@ export default function UpdateIntervenant({
             setSuccess(true);
             setError(null);
             onIntervenantUpdated();
-        } catch (err) {
-            setError('Erreur lors de la mise à jour de l\'intervenant');
+        } catch (error) {
+            setError("Erreur lors de la mise à jour de l&apos;intervenant");
+            console.error('Error updating intervenant:', error);
             setSuccess(false);
         }
     };
@@ -45,7 +46,7 @@ export default function UpdateIntervenant({
 
     return (
         <div className="max-w-md mx-auto p-6">
-            <h2 className="text-2xl font-bold mb-4">Modifier l'intervenant</h2>
+            <h2 className="text-2xl font-bold mb-4">Modifier l&apos;intervenant</h2>
 
             {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>}
             {success && <div className="bg-green-100 text-green-700 p-3 rounded mb-4">Intervenant mis à jour avec succès!</div>}

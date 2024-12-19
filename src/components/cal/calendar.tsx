@@ -1,12 +1,31 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useState, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import frLocale from '@fullcalendar/core/locales/fr';
 import multiMonthPlugin from '@fullcalendar/multimonth';
 import interactionPlugin from '@fullcalendar/interaction';
+import { EventClickArg, DatesSetArg, DateSelectArg } from '@fullcalendar/core';
+
+interface Event {
+    title: string;
+    start: string;
+    end: string;
+    backgroundColor?: string;
+    borderColor?: string;
+}
+
+interface Availability {
+    from: string;
+    to: string;
+    days: string;
+}
+
+interface AvailabilityMap {
+    [key: string]: Availability[];
+}
 
 function DeleteEventModal({ isOpen, onClose, onConfirm }: {
     isOpen: boolean;
@@ -51,8 +70,8 @@ function getWeekNumber(date: Date): number {
 }
 
 interface CalendarProps {
-    events: any[];
-    onAvailabilityChange?: (updateFn: (prev: any) => any) => void;
+    events: Event[];
+    onAvailabilityChange?: (updateFn: (prev: AvailabilityMap) => AvailabilityMap) => void;
     displayMode?: 'default' | 'specific' | 'all';
     onDateSelect?: (date: Date) => void;
 }
@@ -67,9 +86,9 @@ export const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
     displayMode = 'all'
 }, ref) => {
     const [currentWeek, setCurrentWeek] = useState<number>(getWeekNumber(new Date()));
-    const [selectedEvent, setSelectedEvent] = useState<any>(null);
+    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const calendarRef = useRef<any>(null);
+    const calendarRef = useRef<FullCalendar>(null);
 
     const goToDate = useCallback((date: Date) => {
         if (calendarRef.current) {
@@ -91,13 +110,13 @@ export const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
         }
     });
 
-    const handleDatesSet = useCallback((dateInfo: any) => {
+    const handleDatesSet = useCallback((dateInfo: DatesSetArg) => {
         const weekNumber = getWeekNumber(dateInfo.start);
         setCurrentWeek(weekNumber);
     }, []);
 
-    const handleEventClick = useCallback((clickInfo: any) => {
-        setSelectedEvent(clickInfo.event);
+    const handleEventClick = useCallback((clickInfo: EventClickArg) => {
+        setSelectedEvent(clickInfo.event.toPlainObject() as Event);
         setIsDeleteModalOpen(true);
     }, []);
 
@@ -109,7 +128,7 @@ export const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
             const weekNumber = getWeekNumber(eventDate);
             const weekKey = selectedEvent.title.includes('Default') ? 'default' : `S${weekNumber}`;
 
-            await onAvailabilityChange((prevAvailabilities: any) => {
+            await onAvailabilityChange((prevAvailabilities: AvailabilityMap) => {
                 const updatedAvailabilities = { ...prevAvailabilities };
 
                 if (updatedAvailabilities[weekKey]) {
@@ -119,7 +138,7 @@ export const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
                         days: ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'][eventDate.getDay()]
                     };
 
-                    updatedAvailabilities[weekKey] = updatedAvailabilities[weekKey].filter((slot: any) =>
+                    updatedAvailabilities[weekKey] = updatedAvailabilities[weekKey].filter((slot: Availability) =>
                         !(slot.from === eventTime.from &&
                             slot.to === eventTime.to &&
                             slot.days === eventTime.days)
@@ -141,7 +160,7 @@ export const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
         }
     }, [onAvailabilityChange, selectedEvent]);
 
-    const handleSelect = useCallback((selectInfo: any) => {
+    const handleSelect = useCallback((selectInfo: DateSelectArg) => {
         if (!onAvailabilityChange || displayMode === 'all') return;
 
         const startDate = new Date(selectInfo.start);
@@ -161,7 +180,7 @@ export const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
             to
         };
 
-        onAvailabilityChange((prevAvailabilities: any) => {
+        onAvailabilityChange((prevAvailabilities: AvailabilityMap) => {
             const updatedAvailabilities = { ...prevAvailabilities };
 
             if (updatedAvailabilities[weekKey]) {
@@ -183,14 +202,14 @@ export const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
                     <div>Semaine {currentWeek}</div>
                     <div className="text-sm text-gray-600">
                         Mode: {
-                            displayMode === 'default' ? 'Par défaut' :
-                                displayMode === 'specific' ? 'Spécifique' :
-                                    'Tous les événements'
+                            displayMode === 'default' ? "Par défaut" :
+                                displayMode === 'specific' ? "Spécifique" :
+                                    "Tous les événements"
                         }
                     </div>
                     {displayMode === 'all' && (
                         <div className="text-xs text-orange-600 mt-1">
-                            Sélectionnez le mode "Par défaut" ou "Spécifique" pour ajouter des disponibilités
+                            Sélectionnez le mode &quot;Par défaut&quot; ou &quot;Spécifique&quot; pour ajouter des disponibilités
                         </div>
                     )}
                 </div>
@@ -235,6 +254,8 @@ export const WeekCalendar = forwardRef<WeekCalendarRef, CalendarProps>(({
     );
 });
 
+WeekCalendar.displayName = 'WeekCalendar';
+
 function MonthCalendar({ events, displayMode = 'all', onDateSelect }: CalendarProps) {
     const currentDate = new Date();
     let academicYear = currentDate.getFullYear();
@@ -255,7 +276,7 @@ function MonthCalendar({ events, displayMode = 'all', onDateSelect }: CalendarPr
         }
     });
 
-    const dayEvents = filteredEvents.reduce((acc: { [key: string]: string }, event: any) => {
+    const dayEvents = filteredEvents.reduce((acc: { [key: string]: string }, event: Event) => {
         const eventStart = new Date(event.start);
         const dateKey = new Date(eventStart.getTime() - eventStart.getTimezoneOffset() * 60000)
             .toISOString()
@@ -272,13 +293,13 @@ function MonthCalendar({ events, displayMode = 'all', onDateSelect }: CalendarPr
         return acc;
     }, {});
 
-    const handleDateClick = useCallback((arg: any) => {
+    const handleDateClick = useCallback((arg: { date: Date }) => {
         if (onDateSelect) {
             onDateSelect(arg.date);
         }
     }, [onDateSelect]);
 
-    const dayCellDidMount = useCallback((arg: any) => {
+    const dayCellDidMount = useCallback((arg: { date: Date; el: HTMLElement }) => {
         const date = arg.date;
         if (date.getDay() === 0 || date.getDay() === 6) return;
 

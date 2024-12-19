@@ -1,5 +1,13 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db.server';
+import { AvailabilityPeriod, Availability } from '@/lib/calendar-utils';
+
+interface ExportData {
+    [intervenantName: string]: {
+        availabilities: AvailabilityPeriod | Availability[];
+        last_update: string;
+    };
+}
 
 export async function GET() {
     try {
@@ -12,7 +20,7 @@ export async function GET() {
             // Formater les données selon le format demandé
             const formattedData = {
                 export_date: new Date().toISOString(),
-                intervenants: result.rows.reduce((acc: any, intervenant) => {
+                intervenants: result.rows.reduce((acc: ExportData, intervenant) => {
                     const intervenantName = `${intervenant.name} ${intervenant.lastname}`;
 
                     // Si les disponibilités sont vides, ne pas inclure l'intervenant

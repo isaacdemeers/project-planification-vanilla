@@ -30,7 +30,7 @@ export default function RegisterForm() {
 
             router.push('/login');
         } catch (error) {
-            setError('Une erreur est survenue');
+            setError('Une erreur est survenue' + error);
         }
     }
 
@@ -83,7 +83,7 @@ export default function RegisterForm() {
                     type="submit"
                     className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600"
                 >
-                    S'inscrire
+                    S&apos;inscrire
                 </button>
             </form>
         </div>

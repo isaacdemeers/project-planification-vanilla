@@ -1,5 +1,18 @@
+/* eslint-disable quotes */
+/* eslint-disable jsx-quotes */
+
 import { useState } from 'react';
 import { Upload, AlertCircle, CheckCircle2 } from 'lucide-react';
+
+interface WorkweekEntry {
+    week: number;
+    hours: number;
+}
+
+interface WorkweekData {
+    intervenant: string;
+    workweek: WorkweekEntry[];
+}
 
 const EXAMPLE_JSON = `[
     {
@@ -26,7 +39,7 @@ export default function ImportWorkweek() {
     const [success, setSuccess] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    const validateWorkweek = (workweek: any[]): boolean => {
+    const validateWorkweek = (workweek: WorkweekEntry[]): boolean => {
         return workweek.every(w =>
             typeof w === 'object' &&
             w !== null &&
@@ -44,11 +57,12 @@ export default function ImportWorkweek() {
             setError(null);
             setSuccess(false);
 
-            let data;
+            let data: WorkweekData[];
             try {
                 data = JSON.parse(jsonText);
             } catch (e) {
                 throw new Error('Format JSON invalide. Veuillez vérifier la syntaxe.');
+                console.error('Error parsing JSON:', e);
             }
 
             if (!Array.isArray(data)) {
@@ -123,23 +137,23 @@ export default function ImportWorkweek() {
                             <div className="bg-gray-50 p-4 rounded-lg mb-4">
                                 <h3 className="text-sm font-medium text-gray-700 mb-2">Format attendu :</h3>
                                 <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-                                    <li>Un tableau d'objets</li>
+                                    <li>Un tableau d&apos;objets</li>
                                     <li>Chaque objet doit contenir :</li>
                                     <ul className="ml-6 list-circle">
-                                        <li>"intervenant": email de l'intervenant</li>
-                                        <li>"workweek": tableau des semaines</li>
+                                        <li>&quot;intervenant&quot;: email de l&apos;intervenant</li>
+                                        <li>&quot;workweek&quot;: tableau des semaines</li>
                                     </ul>
                                     <li>Chaque semaine doit avoir :</li>
                                     <ul className="ml-6 list-circle">
-                                        <li>"week": numéro de semaine (1-53)</li>
-                                        <li>"hours": nombre d'heures (> 0)</li>
+                                        <li>&quot;week&quot;: numéro de semaine (1-53)</li>
+                                        <li>&quot;hours&quot;: nombre d&apos;heures (&gt; 0)</li>
                                     </ul>
                                 </ul>
                                 <button
                                     onClick={() => setJsonText(EXAMPLE_JSON)}
                                     className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
                                 >
-                                    Utiliser l'exemple
+                                    Utiliser l&apos;exemple
                                 </button>
                             </div>
                             <textarea

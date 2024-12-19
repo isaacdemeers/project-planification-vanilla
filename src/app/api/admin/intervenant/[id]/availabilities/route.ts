@@ -1,8 +1,9 @@
+import { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import db from '@/lib/db.server';
 
 export async function GET(
-    request: Request,
+    request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
@@ -34,7 +35,7 @@ export async function GET(
 }
 
 export async function PUT(
-    request: Request,
+    request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
@@ -42,7 +43,6 @@ export async function PUT(
         const client = await db.connect();
 
         try {
-            // Vérifier si la colonne existe
             const columnExists = await client.query(`
                 SELECT EXISTS (
                     SELECT FROM information_schema.columns 
@@ -51,7 +51,6 @@ export async function PUT(
                 );
             `);
 
-            // Construire la requête en fonction de l'existence de la colonne
             const updateQuery = columnExists.rows[0].exists
                 ? `UPDATE "Intervenant"
                    SET availabilities = $1,
@@ -76,10 +75,10 @@ export async function PUT(
         } finally {
             client.release();
         }
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
         console.error('Error in PUT:', error);
         return NextResponse.json(
-            { error: 'Failed to update availabilities', details: error.message },
+            { error: 'Failed to update availabilities', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }

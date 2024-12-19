@@ -33,16 +33,16 @@ export async function POST(
             }
 
             return NextResponse.json(result.rows[0]);
-        } catch (error: any) {
+        } catch (error: Error | unknown) {
             console.error('Database error:', error);
             throw error;
         } finally {
             client.release();
         }
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
         console.error('Error in POST:', error);
         return NextResponse.json(
-            { error: 'Failed to regenerate connect key', details: error.message },
+            { error: 'Failed to regenerate connect key', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }

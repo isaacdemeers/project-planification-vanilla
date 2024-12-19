@@ -1,12 +1,26 @@
-type Availability = {
+// Define interfaces for the expected data structures
+interface Availability {
     days: string;
     from: string;
     to: string;
-};
+}
 
-export type AvailabilityPeriod = {
+export interface AvailabilityPeriod {
     [key: string]: Availability[];
-} | Record<string, never>;
+}
+
+interface WorkWeek {
+    week: number;
+    hours: number;
+}
+
+interface CalendarEvent {
+    title: string;
+    start: string;
+    end: string;
+    backgroundColor: string;
+    borderColor: string;
+}
 
 // Validation des horaires au format HH:mm
 function isValidTimeFormat(time: string): boolean {
@@ -22,28 +36,29 @@ function isValidDays(days: string): boolean {
 }
 
 // Validation d'une disponibilité individuelle
-function isValidAvailability(availability: any): availability is Availability {
+function isValidAvailability(availability: unknown): availability is Availability {
     if (!availability || typeof availability !== 'object') return false;
 
+    const avail = availability as Record<string, unknown>;
     return (
-        typeof availability.days === 'string' &&
-        typeof availability.from === 'string' &&
-        typeof availability.to === 'string' &&
-        isValidDays(availability.days) &&
-        isValidTimeFormat(availability.from) &&
-        isValidTimeFormat(availability.to)
+        typeof avail.days === 'string' &&
+        typeof avail.from === 'string' &&
+        typeof avail.to === 'string' &&
+        isValidDays(avail.days) &&
+        isValidTimeFormat(avail.from) &&
+        isValidTimeFormat(avail.to)
     );
 }
 
 // Validation d'une période de disponibilité
-function isValidAvailabilityPeriod(period: any): period is AvailabilityPeriod {
+function isValidAvailabilityPeriod(period: unknown): period is AvailabilityPeriod {
     if (!period || typeof period !== 'object') return false;
 
     // Allow empty objects
-    if (Object.keys(period).length === 0) return true;
+    if (Object.keys(period as object).length === 0) return true;
 
     // Vérifier chaque clé du period
-    return Object.entries(period).every(([key, value]) => {
+    return Object.entries(period as Record<string, unknown>).every(([key, value]) => {
         // Vérifier que la clé est soit 'default' soit commence par 'S' suivi d'un nombre
         if (key !== 'default' && !/^S\d+$/.test(key)) return false;
 
@@ -53,7 +68,7 @@ function isValidAvailabilityPeriod(period: any): period is AvailabilityPeriod {
 }
 
 // Fonction pour valider et nettoyer les disponibilités
-export function validateAndCleanAvailabilities(availabilities: any): AvailabilityPeriod {
+export function validateAndCleanAvailabilities(availabilities: unknown): AvailabilityPeriod {
     if (availabilities === null || availabilities === undefined) {
         return {};
     }
@@ -74,20 +89,6 @@ const DAYS_MAP: { [key: string]: number } = {
     'dimanche': 6,
 };
 
-function isInCurrentAcademicYear(date: Date): boolean {
-    const currentDate = new Date();
-    const academicYearStart = new Date(currentDate.getFullYear(), 8, 1); // September 1st
-    const academicYearEnd = new Date(currentDate.getFullYear() + 1, 5, 30); // June 30th next year
-
-    if (currentDate < academicYearStart) {
-        // We're before September, use previous academic year
-        academicYearStart.setFullYear(academicYearStart.getFullYear() - 1);
-        academicYearEnd.setFullYear(academicYearEnd.getFullYear() - 1);
-    }
-
-    return date >= academicYearStart && date <= academicYearEnd;
-}
-
 function getWeekNumber(date: Date): number {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
@@ -105,9 +106,9 @@ function getStartOfWeek(date: Date): Date {
     return monday;
 }
 
-function createEventForSlot(slot: Availability, date: Date, title: string, color: string) {
+function createEventForSlot(slot: Availability, date: Date, title: string, color: string): CalendarEvent[] {
     const days = slot.days.split(',').map(day => day.trim().toLowerCase());
-    const events: any[] = [];
+    const events: CalendarEvent[] = [];
 
     days.forEach(day => {
         const dayIndex = DAYS_MAP[day];
@@ -137,8 +138,8 @@ function createEventForSlot(slot: Availability, date: Date, title: string, color
     return events;
 }
 
-export function convertAvailabilitiesToEvents(availabilities: AvailabilityPeriod) {
-    const events: any[] = [];
+export function convertAvailabilitiesToEvents(availabilities: AvailabilityPeriod): CalendarEvent[] {
+    const events: CalendarEvent[] = [];
     if (!availabilities) return events;
 
     const currentDate = new Date();
