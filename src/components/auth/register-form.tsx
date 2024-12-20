@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { registerSchema } from '@/lib/zod';
+import { z } from 'zod';
 
 export default function RegisterForm() {
     const [error, setError] = useState<string | null>(null);
@@ -10,16 +12,19 @@ export default function RegisterForm() {
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
+        const data = {
+            name: formData.get('name') as string,
+            email: formData.get('email') as string,
+            password: formData.get('password') as string,
+        };
 
         try {
+            await registerSchema.parseAsync(data);
+
             const response = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: formData.get('name'),
-                    email: formData.get('email'),
-                    password: formData.get('password'),
-                }),
+                body: JSON.stringify(data),
             });
 
             if (!response.ok) {
@@ -30,7 +35,11 @@ export default function RegisterForm() {
 
             router.push('/login');
         } catch (error) {
-            setError('Une erreur est survenue' + error);
+            if (error instanceof z.ZodError) {
+                setError(error.errors[0].message);
+                return;
+            }
+            setError('Une erreur est survenue');
         }
     }
 
