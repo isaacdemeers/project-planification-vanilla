@@ -55,6 +55,7 @@ interface HeaderSectionProps {
     hasSpecificAvailabilities: boolean;
     currentWeek: number;
     workweek: WorkWeekItem[];
+    lastUpdate?: string;
 }
 
 interface WeekIndicatorProps {
@@ -164,7 +165,8 @@ function HeaderSection({
     hasSpecificAvailabilities,
     currentWeek,
     workweek,
-    availabilities
+    availabilities,
+    lastUpdate
 }: HeaderSectionProps & { availabilities: AvailabilityPeriod }) {
     const weekKey = `S${currentWeek}`;
     const availableHours = useMemo(() => {
@@ -181,6 +183,17 @@ function HeaderSection({
     return (
         <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex flex-col gap-4">
+                {lastUpdate && (
+                    <div className="text-sm text-gray-600">
+                        Dernière modification : {new Date(lastUpdate).toLocaleString('fr-FR', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })}
+                    </div>
+                )}
                 <div className="flex items-center justify-between">
                     <div className="flex bg-white rounded-lg p-1 shadow-sm">
                         <button
@@ -314,6 +327,7 @@ export default function IntervenantCalendar({ intervenantId }: CalendarProps) {
         calendar: null
     });
     const calendarRef = useRef<FullCalendar>(null);
+    const [lastUpdate, setLastUpdate] = useState<string | undefined>();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -321,6 +335,7 @@ export default function IntervenantCalendar({ intervenantId }: CalendarProps) {
             const data = await response.json();
             setAvailabilities(data.availabilities || {});
             setWorkweek(data.workweek || []);
+            setLastUpdate(data.last_availability_update);
         };
         fetchData();
     }, [intervenantId]);
@@ -466,6 +481,7 @@ export default function IntervenantCalendar({ intervenantId }: CalendarProps) {
                 currentWeek={currentWeek}
                 workweek={workweek}
                 availabilities={availabilities}
+                lastUpdate={lastUpdate}
             />
 
             <WeekIndicator

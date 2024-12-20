@@ -1,17 +1,17 @@
-import { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db.server';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params; // Attendre la résolution de la promesse pour obtenir l'ID
         const client = await db.connect();
         try {
             const result = await client.query(
                 'SELECT * FROM "Intervenant" WHERE id = $1',
-                [params.id]
+                [id]
             );
 
             if (result.rows.length === 0) {
@@ -36,9 +36,10 @@ export async function GET(
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params; // Attendre la résolution de la promesse pour obtenir l'ID
         const { availabilities } = await request.json();
         const client = await db.connect();
 
@@ -62,7 +63,7 @@ export async function PUT(
                    WHERE id = $2
                    RETURNING *`;
 
-            const result = await client.query(updateQuery, [availabilities, params.id]);
+            const result = await client.query(updateQuery, [availabilities, id]);
 
             if (result.rowCount === 0) {
                 return NextResponse.json(
@@ -75,11 +76,11 @@ export async function PUT(
         } finally {
             client.release();
         }
-    } catch (error: Error | unknown) {
+    } catch (error) {
         console.error('Error in PUT:', error);
         return NextResponse.json(
             { error: 'Failed to update availabilities', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }
-} 
+}

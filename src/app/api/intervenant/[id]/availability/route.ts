@@ -2,12 +2,13 @@ import { NextResponse } from 'next/server';
 import db from '@/lib/db.server';
 
 // GET - Récupérer les disponibilités
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params; // Résolution asynchrone de params
     const client = await db.connect();
     try {
         const result = await client.query(
             'SELECT id, name, lastname, availabilities FROM "Intervenant" WHERE connect_key = $1',
-            [params.id]
+            [id]
         );
         if (result.rows.length === 0) {
             return NextResponse.json({ error: 'Intervenant not found' }, { status: 404 });
@@ -19,14 +20,15 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 // POST - Ajouter une disponibilité
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const { weekKey, availability } = await request.json();
     const client = await db.connect();
 
     try {
         const currentResult = await client.query(
             'SELECT availabilities FROM "Intervenant" WHERE connect_key = $1',
-            [params.id]
+            [id]
         );
 
         const currentAvailabilities = currentResult.rows[0]?.availabilities || {};
@@ -40,7 +42,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
              SET availabilities = $1
              WHERE connect_key = $2
              RETURNING availabilities`,
-            [currentAvailabilities, params.id]
+            [currentAvailabilities, id]
         );
 
         return NextResponse.json(result.rows[0].availabilities);
@@ -50,7 +52,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
 }
 
 // PUT - Mettre à jour toutes les disponibilités
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const { availabilities } = await request.json();
     const client = await db.connect();
 
@@ -60,7 +63,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
              SET availabilities = $1
              WHERE connect_key = $2
              RETURNING id, name, lastname, availabilities`,
-            [availabilities, params.id]
+            [availabilities, id]
         );
 
         if (result.rowCount === 0) {
@@ -74,14 +77,15 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 }
 
 // DELETE - Supprimer une disponibilité
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const { weekKey, index } = await request.json();
     const client = await db.connect();
 
     try {
         const currentResult = await client.query(
             'SELECT availabilities FROM "Intervenant" WHERE connect_key = $1',
-            [params.id]
+            [id]
         );
 
         const currentAvailabilities = currentResult.rows[0]?.availabilities || {};
@@ -97,11 +101,11 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
              SET availabilities = $1
              WHERE connect_key = $2
              RETURNING availabilities`,
-            [currentAvailabilities, params.id]
+            [currentAvailabilities, id]
         );
 
         return NextResponse.json(result.rows[0].availabilities);
     } finally {
         client.release();
     }
-} 
+}

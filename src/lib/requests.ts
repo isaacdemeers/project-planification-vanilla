@@ -121,4 +121,3 @@ export async function updateAvailabilities(id: string, availabilities: object): 
 
   return data;
 }
-

@@ -4,10 +4,11 @@ import db from '@/lib/db.server';
 
 export async function GET(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const result = await validateConnectKey(params.id);
+        const { id } = await params; // Attendre la résolution de la promesse pour obtenir l'ID
+        const result = await validateConnectKey(id);
 
         if (result.type === 'error') {
             return NextResponse.json({ error: result.code }, { status: 401 });
@@ -25,13 +26,13 @@ export async function GET(
 
 export async function PUT(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const key = params.id;
+        const { id } = await params; // Attendre la résolution de la promesse pour obtenir l'ID
         const { availabilities } = await request.json();
 
-        const validationResult = await validateConnectKey(key);
+        const validationResult = await validateConnectKey(id);
         if (validationResult.type === 'error') {
             return NextResponse.json({ error: validationResult.code }, { status: 401 });
         }
@@ -57,11 +58,11 @@ export async function PUT(
         } finally {
             client.release();
         }
-    } catch (error: Error | unknown) {
+    } catch (error) {
         console.error('Error in PUT:', error);
         return NextResponse.json(
             { error: 'Failed to update availabilities', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }
-} 
+}
