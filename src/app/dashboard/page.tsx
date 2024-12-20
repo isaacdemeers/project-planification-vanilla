@@ -59,24 +59,23 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-8">
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                            Paramètres généraux
-                        </h2>
-                        <KeyValiditySettings />
+                <div className="flex flex-col gap-8">
+                    <div className="bg-white w-full rounded-lg shadow p-6 flex item-start justify-evenly ">
+                        <div className='flex items-start justify-start flex-col'>
+
+                            <KeyValiditySettings />
+
+                        </div>
+
+                        <div className="flex items-start justify-start flex-col">
+
+                            <AddIntervenant onIntervenantAdded={() => { }} />
+                        </div>
                     </div>
 
                     <div className="bg-white rounded-lg shadow">
-                        <div className="p-6 border-b">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-semibold text-gray-900">
-                                    Gestion des intervenants
-                                </h2>
-                                <AddIntervenant onIntervenantAdded={() => { }} />
-                            </div>
-                        </div>
-                        <div className="p-6">
+
+                        <div className="p-6 w-full">
                             <IntervenantsList
                                 selectedId={selectedIntervenantId}
                                 onShowCalendar={handleShowCalendar}

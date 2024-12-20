@@ -494,7 +494,7 @@ export default function IntervenantCalendar({ intervenantId }: CalendarProps) {
                     validRange={getAcademicYearDates()}
                     select={handleSelect}
                     eventClick={handleEventClick}
-                    headerToolbar={false}
+                    headerToolbar={{ start: 'prev,today,next', center: '', end: '' }}
                     events={events}
                     dayHeaderFormat={{
                         weekday: isRecurrent ? 'long' : 'short',
