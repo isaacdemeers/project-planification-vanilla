@@ -5,5 +5,5 @@ export const { auth: middleware } = NextAuth(authConfig);
 
 // Configurer les routes à protéger
 export const config = {
-    matcher: ['/dashboard/:path*']
+    matcher: []
 }; 
