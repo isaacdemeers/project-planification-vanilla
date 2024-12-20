@@ -21,16 +21,16 @@ export async function POST() {
             );
 
             return NextResponse.json(result.rows);
-        } catch (error: any) {
+        } catch (error) {
             console.error('Database error:', error);
             throw error;
         } finally {
             client.release();
         }
-    } catch (error: any) {
+    } catch (error) {
         console.error('Error in POST:', error);
         return NextResponse.json(
-            { error: 'Failed to regenerate all keys', details: error.message },
+            { error: 'Failed to regenerate all keys', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }

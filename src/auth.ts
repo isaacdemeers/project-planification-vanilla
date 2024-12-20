@@ -1,6 +1,6 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
-import { hashPassword, verifyPassword, generateSalt } from "@/lib/password"
+import { verifyPassword } from "@/lib/password"
 import { signInSchema } from "./lib/zod"
 import PostgresAdapter from "@auth/pg-adapter"
 import db from "@/lib/db.server"

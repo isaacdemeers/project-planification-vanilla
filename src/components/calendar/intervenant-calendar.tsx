@@ -1,3 +1,5 @@
+/* eslint-disable quotes */
+/* eslint-disable jsx-quotes */
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -5,8 +7,8 @@ import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import frLocale from '@fullcalendar/core/locales/fr';
-import { analyzeAvailabilities, formatWeekWarning } from '@/lib/calendar-utils';
-import { AlertTriangle, AlertCircle } from 'lucide-react';
+import { AvailabilityPeriod, Availability, convertAvailabilitiesToEvents } from '@/lib/calendar-utils';
+import { DateSelectArg, DatesSetArg, EventClickArg } from '@fullcalendar/core';
 
 interface CalendarEvent {
     title: string;
@@ -16,32 +18,73 @@ interface CalendarEvent {
     borderColor?: string;
 }
 
+interface FormattedAvailability {
+    weekKey: string;
+    availability: Availability;
+}
+
+interface WorkWeekItem {
+    week: number;
+    hours: number;
+}
+
+interface WeekData {
+    week: number;
+    count: number;
+}
+
+interface CalendarProps {
+    intervenantId: string;
+}
+
+interface DeleteModalState {
+    isOpen: boolean;
+    event: CalendarEvent | null;
+    calendar: FullCalendar | null;
+}
+
+interface DeleteModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+}
+
+interface HeaderSectionProps {
+    isRecurrent: boolean;
+    onRecurrentChange: (value: boolean) => void;
+    hasSpecificAvailabilities: boolean;
+    currentWeek: number;
+    workweek: WorkWeekItem[];
+}
+
+interface WeekIndicatorProps {
+    availabilities: AvailabilityPeriod;
+    onWeekClick: (date: Date) => void;
+    onModeChange: (isRecurrent: boolean) => void;
+}
+
 function getAcademicYearDates() {
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
     let startYear = currentYear;
 
-    // Si on est avant août, on est dans l'année académique précédente
-    if (currentDate.getMonth() < 7) { // 7 = août (0-based)
+    if (currentDate.getMonth() < 7) {
         startYear = currentYear - 1;
     }
 
     return {
-        start: new Date(startYear, 7, 1), // 1er août
-        end: new Date(startYear + 1, 6, 31) // 31 juillet
+        start: new Date(startYear, 7, 1),
+        end: new Date(startYear + 1, 6, 31)
     };
 }
 
-function formatEventToAvailability(event: any, calendar: any) {
+function formatEventToAvailability(event: CalendarEvent, view: { currentStart: Date }): FormattedAvailability {
     const start = new Date(event.start);
     const end = new Date(event.end);
 
-    // Récupérer la date de début de la semaine affichée
-    const currentDate = calendar.currentData.currentDate;
-    const weekStart = new Date(currentDate);
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // Lundi de la semaine courante
+    const weekStart = new Date(view.currentStart);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
 
-    // Calculer le numéro de semaine
     const weekNumber = getWeekNumber(weekStart);
 
     return {
@@ -76,12 +119,6 @@ function doEventsOverlap(event1: CalendarEvent, event2: CalendarEvent): boolean 
     return start1 < end2 && start2 < end1;
 }
 
-interface DeleteModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onConfirm: () => void;
-}
-
 function DeleteModal({ isOpen, onClose, onConfirm }: DeleteModalProps) {
     if (!isOpen) return null;
 
@@ -111,19 +148,36 @@ function DeleteModal({ isOpen, onClose, onConfirm }: DeleteModalProps) {
     );
 }
 
+function calculateAvailableHours(availabilities: Availability[]): number {
+    return availabilities.reduce((total, slot) => {
+        const [fromHours, fromMinutes] = slot.from.split(':').map(Number);
+        const [toHours, toMinutes] = slot.to.split(':').map(Number);
+        const hours = toHours - fromHours + (toMinutes - fromMinutes) / 60;
+        const daysCount = slot.days.split(',').length;
+        return total + (hours * daysCount);
+    }, 0);
+}
+
 function HeaderSection({
     isRecurrent,
     onRecurrentChange,
     hasSpecificAvailabilities,
     currentWeek,
-    workweek
-}: {
-    isRecurrent: boolean;
-    onRecurrentChange: (value: boolean) => void;
-    hasSpecificAvailabilities: boolean;
-    currentWeek: number;
-    workweek: any[];
-}) {
+    workweek,
+    availabilities
+}: HeaderSectionProps & { availabilities: AvailabilityPeriod }) {
+    const weekKey = `S${currentWeek}`;
+    const availableHours = useMemo(() => {
+        const weekAvailabilities = availabilities[weekKey];
+        if (weekAvailabilities && weekAvailabilities.length > 0) {
+            return calculateAvailableHours(weekAvailabilities);
+        }
+        if (availabilities.default) {
+            return calculateAvailableHours(availabilities.default);
+        }
+        return 0;
+    }, [availabilities, weekKey]);
+
     return (
         <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex flex-col gap-4">
@@ -168,11 +222,16 @@ function HeaderSection({
                             </span>
                         )}
                     </div>
-                    {workweek.find(w => w.week === currentWeek) && (
-                        <div className="text-sm text-blue-600">
-                            {workweek.find(w => w.week === currentWeek)?.hours}h prévues cette semaine
+                    <div className="flex items-center gap-4 text-sm">
+                        <div className="text-blue-600">
+                            {availableHours.toFixed(1)}h disponibles
                         </div>
-                    )}
+                        {workweek.find(w => w.week === currentWeek) && (
+                            <div className="text-blue-600">
+                                {workweek.find(w => w.week === currentWeek)?.hours}h prévues
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
@@ -183,33 +242,25 @@ function getDateOfISOWeek(week: number) {
     const date = new Date();
     const currentYear = date.getFullYear();
 
-    // Si la semaine est inférieure à 31, c'est l'année suivante
     const targetYear = week < 31 ? currentYear + 1 : currentYear;
 
-    // Ajuster la semaine si elle est supérieure à 52
     const adjustedWeek = week > 52 ? week - 1 : week;
 
-    // Créer une date au 1er janvier de l'année cible
     const firstDayOfYear = new Date(targetYear, 0, 1);
 
-    // Ajuster au lundi de la première semaine de l'année
     const firstMonday = new Date(firstDayOfYear);
     firstMonday.setDate(firstDayOfYear.getDate() + (8 - firstDayOfYear.getDay()) % 7);
 
-    // Calculer la date du lundi de la semaine désirée
     const targetDate = new Date(firstMonday);
     targetDate.setDate(firstMonday.getDate() + (adjustedWeek - 1) * 7);
 
     return targetDate;
 }
 
-function WeekIndicator({ availabilities, onWeekClick }: {
-    availabilities: any;
-    onWeekClick: (date: Date) => void;
-}) {
+function WeekIndicator({ availabilities, onWeekClick, onModeChange }: WeekIndicatorProps) {
     const weeks = useMemo(() => {
-        const currentYearWeeks: { week: number; count: number }[] = [];
-        const nextYearWeeks: { week: number; count: number }[] = [];
+        const currentYearWeeks: WeekData[] = [];
+        const nextYearWeeks: WeekData[] = [];
 
         Object.keys(availabilities)
             .filter(key => key !== 'default')
@@ -220,445 +271,237 @@ function WeekIndicator({ availabilities, onWeekClick }: {
                     count: availabilities[key].length
                 };
 
-                if (week >= 31) {
-                    currentYearWeeks.push(weekData);
-                } else {
+                if (week < 31) {
                     nextYearWeeks.push(weekData);
+                } else {
+                    currentYearWeeks.push(weekData);
                 }
             });
 
-        return [
-            ...currentYearWeeks.sort((a, b) => a.week - b.week),
-            ...nextYearWeeks.sort((a, b) => a.week - b.week)
-        ];
+        return [...currentYearWeeks.sort((a, b) => a.week - b.week), ...nextYearWeeks.sort((a, b) => a.week - b.week)];
     }, [availabilities]);
 
-    if (weeks.length === 0) return null;
-
     const handleWeekClick = (week: number) => {
-        const date = getDateOfISOWeek(week);
-        onWeekClick(date);
+        onModeChange(false); // Passer en mode spécifique
+        onWeekClick(getDateOfISOWeek(week));
     };
 
     return (
-        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Semaines avec disponibilités spécifiques :</h3>
-            <div className="flex flex-wrap gap-2">
-                {weeks.map(({ week, count }, index) => (
-                    <button
-                        key={week}
-                        onClick={() => handleWeekClick(week)}
-                        className={`px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm flex items-center gap-1 hover:bg-blue-200 transition-colors ${week < 31 && weeks[index - 1]?.week >= 31 ? 'ml-6' : ''
-                            }`}
-                    >
-                        <span>S{week}</span>
-                        <span className="bg-blue-200 text-blue-900 px-1.5 py-0.5 rounded-full text-xs">
-                            {count}
-                        </span>
-                    </button>
-                ))}
-            </div>
+        <div className="flex flex-wrap gap-2">
+            {weeks.map(({ week, count }) => (
+                <button
+                    key={week}
+                    onClick={() => handleWeekClick(week)}
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200"
+                >
+                    S{week} ({count})
+                </button>
+            ))}
         </div>
     );
 }
 
-export default function IntervenantCalendar({ intervenantId }: { intervenantId: string }) {
+export default function IntervenantCalendar({ intervenantId }: CalendarProps) {
+    const [availabilities, setAvailabilities] = useState<AvailabilityPeriod>({});
+    const [workweek, setWorkweek] = useState<WorkWeekItem[]>([]);
+    const [isRecurrent, setIsRecurrent] = useState<boolean>(false);
+    const [currentWeek, setCurrentWeek] = useState<number>(getWeekNumber(new Date()));
+    const [hasSpecificAvailabilities, setHasSpecificAvailabilities] = useState<boolean>(false);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
-    const [availabilities, setAvailabilities] = useState<any>({});
-    const [workweek, setWorkweek] = useState<any[]>([]);
-    const [error, setError] = useState<string | null>(null);
-    const [lastUpdate, setLastUpdate] = useState<string | null>(null);
-    const [currentWeek, setCurrentWeek] = useState<number>(0);
-    const academicYear = useMemo(() => getAcademicYearDates(), []);
-    const [deleteModal, setDeleteModal] = useState({
+    const [deleteModal, setDeleteModal] = useState<DeleteModalState>({
         isOpen: false,
-        event: null as any,
-        calendar: null as any
+        event: null,
+        calendar: null
     });
-    const [isRecurrent, setIsRecurrent] = useState(false);
-    const calendarRef = useRef<any>(null);
-
-    const analysis = useMemo(() => {
-        return analyzeAvailabilities(availabilities, workweek);
-    }, [availabilities, workweek]);
-
-    const generateRecurringEvents = useMemo(() => (slot: any, weekKey: string) => {
-        const events: CalendarEvent[] = [];
-        const [hours, minutes] = slot.from.split(':').map(Number);
-        const [endHours, endMinutes] = slot.to.split(':').map(Number);
-        const days = slot.days.split(',').map((day: string) => day.trim());
-
-        days.forEach((day: string) => {
-            const dayIndex = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'].indexOf(day);
-            if (dayIndex === -1) return;
-
-            let currentDate = new Date(academicYear.start);
-            const diff = (dayIndex + 1 - (currentDate.getDay() || 7) + 7) % 7;
-            currentDate.setDate(currentDate.getDate() + diff);
-
-            while (currentDate <= academicYear.end) {
-                const start = new Date(currentDate);
-                start.setHours(hours, minutes, 0);
-                const end = new Date(currentDate);
-                end.setHours(endHours, endMinutes, 0);
-
-                events.push({
-                    title: 'Disponible (Récurrent)',
-                    start: start.toISOString(),
-                    end: end.toISOString(),
-                    backgroundColor: '#60a5fa',
-                    borderColor: '#60a5fa'
-                });
-
-                currentDate.setDate(currentDate.getDate() + 7);
-            }
-        });
-
-        return events;
-    }, [academicYear]);
-
-    const convertAvailabilitiesToEvents = useMemo(() => () => {
-        const newEvents: CalendarEvent[] = [];
-
-        if (isRecurrent) {
-            if (Array.isArray(availabilities.default)) {
-                availabilities.default.forEach((slot: any) => {
-                    newEvents.push(...generateRecurringEvents(slot, 'default'));
-                });
-            }
-            return newEvents;
-        }
-
-        Object.entries(availabilities).forEach(([weekKey, slots]) => {
-            if (weekKey === 'default') return;
-
-            if (Array.isArray(slots)) {
-                slots.forEach((slot: any) => {
-                    const [hours, minutes] = slot.from.split(':').map(Number);
-                    const [endHours, endMinutes] = slot.to.split(':').map(Number);
-                    const days = slot.days.split(',').map((day: string) => day.trim());
-
-                    days.forEach((day: string) => {
-                        const date = getDateFromWeekAndDay(weekKey, day, academicYear);
-                        if (date) {
-                            const start = new Date(date);
-                            start.setHours(hours, minutes);
-                            const end = new Date(date);
-                            end.setHours(endHours, endMinutes);
-
-                            newEvents.push({
-                                title: 'Disponible',
-                                start: start.toISOString(),
-                                end: end.toISOString(),
-                                backgroundColor: '#93c5fd',
-                                borderColor: '#93c5fd'
-                            });
-                        }
-                    });
-                });
-            }
-        });
-
-        return newEvents;
-    }, [availabilities, generateRecurringEvents, academicYear, isRecurrent]);
+    const calendarRef = useRef<FullCalendar>(null);
 
     useEffect(() => {
-        setEvents(convertAvailabilitiesToEvents());
-    }, [convertAvailabilitiesToEvents, isRecurrent]);
-
-    function getDateFromWeekAndDay(weekKey: string, day: string, academicYear: { start: Date, end: Date }): Date | null {
-        if (weekKey === 'default') {
-            const dayIndex = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
-                .indexOf(day.toLowerCase());
-
-            if (dayIndex === -1) return null;
-
-            const date = new Date(academicYear.start);
-            const currentDay = date.getDay() || 7;
-            const diff = dayIndex + 1 - currentDay;
-            date.setDate(date.getDate() + diff);
-
-            return date;
-        }
-
-        const weekNumber = parseInt(weekKey.substring(1));
-        const dayIndex = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
-            .indexOf(day.toLowerCase());
-
-        if (dayIndex === -1) return null;
-
-        const currentDate = new Date();
-        const currentYear = currentDate.getFullYear();
-        const firstDayOfYear = new Date(currentYear, 0, 1);
-        const dayOffset = firstDayOfYear.getDay() || 7;
-        firstDayOfYear.setDate(firstDayOfYear.getDate() + (1 - dayOffset));
-        const date = new Date(firstDayOfYear);
-        date.setDate(date.getDate() + (weekNumber - 1) * 7 + dayIndex);
-
-        return date;
-    }
-
-    const handleSelect = useCallback((selectInfo: any) => {
-        const newEvent = {
-            title: isRecurrent ? 'Disponible (Récurrent)' : 'Disponible',
-            start: selectInfo.start,
-            end: selectInfo.end,
-            backgroundColor: isRecurrent ? '#60a5fa' : '#93c5fd',
-            borderColor: isRecurrent ? '#60a5fa' : '#93c5fd'
+        const fetchData = async () => {
+            const response = await fetch(`/api/admin/intervenant/${intervenantId}/availabilities`);
+            const data = await response.json();
+            setAvailabilities(data.availabilities || {});
+            setWorkweek(data.workweek || []);
         };
-
-        const hasOverlap = events.some(existingEvent => {
-            const sameDay = new Date(existingEvent.start).toDateString() === new Date(newEvent.start).toDateString();
-            return sameDay && doEventsOverlap(existingEvent, newEvent);
-        });
-
-        if (hasOverlap) {
-            setError("Il y a déjà une disponibilité sur ce créneau");
-            setTimeout(() => setError(null), 3000);
-            selectInfo.view.calendar.unselect();
-            return;
-        }
-
-        const { weekKey, availability } = formatEventToAvailability(newEvent, selectInfo.view.calendar);
-        const newAvailabilities = { ...availabilities };
-        const targetKey = isRecurrent ? 'default' : weekKey;
-
-        if (!newAvailabilities[targetKey]) {
-            newAvailabilities[targetKey] = [];
-        }
-        newAvailabilities[targetKey].push(availability);
-
-        saveAvailabilities(newAvailabilities);
-    }, [events, availabilities, isRecurrent, intervenantId]);
-
-    const handleEventClick = useCallback((clickInfo: any) => {
-        setDeleteModal({
-            isOpen: true,
-            event: clickInfo.event,
-            calendar: clickInfo.view.calendar
-        });
-    }, []);
-
-    const handleDeleteConfirm = useCallback(() => {
-        if (!deleteModal.event) return;
-
-        const eventToDelete = deleteModal.event;
-        const isRecurrentEvent = eventToDelete.title.includes('Récurrent');
-        const { weekKey, availability } = formatEventToAvailability(eventToDelete, deleteModal.calendar);
-
-        const newAvailabilities = { ...availabilities };
-        const targetKey = isRecurrentEvent ? 'default' : weekKey;
-
-        if (newAvailabilities[targetKey]) {
-            const eventTime = new Date(eventToDelete.start).toLocaleTimeString('fr-FR', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            const eventDay = getDayName(new Date(eventToDelete.start).getDay());
-
-            newAvailabilities[targetKey] = newAvailabilities[targetKey].filter(
-                (a: any) => !(a.from === eventTime && a.days === eventDay)
-            );
-
-            if (newAvailabilities[targetKey].length === 0) {
-                delete newAvailabilities[targetKey];
-            }
-
-            saveAvailabilities(newAvailabilities);
-        }
-
-        setDeleteModal({ isOpen: false, event: null, calendar: null });
-    }, [deleteModal.event, deleteModal.calendar, availabilities, intervenantId]);
-
-    // Charger les disponibilités initiales
-    useEffect(() => {
-        const fetchAvailabilities = async () => {
-            try {
-                const response = await fetch(`/api/admin/intervenant/${intervenantId}/availabilities`);
-                if (!response.ok) throw new Error('Failed to fetch availabilities');
-                const data = await response.json();
-                setAvailabilities(data.availabilities || {});
-                setWorkweek(data.workweek || []);
-                setLastUpdate(data.last_availability_update);
-            } catch (error) {
-                console.error('Error fetching availabilities:', error);
-                setError('Erreur lors du chargement des disponibilités');
-            }
-        };
-
-        fetchAvailabilities();
+        fetchData();
     }, [intervenantId]);
 
-    // Fonction pour sauvegarder les disponibilités
-    const saveAvailabilities = async (newAvailabilities: any) => {
+    useEffect(() => {
+        if (!availabilities) return;
+
+        const filteredAvailabilities: AvailabilityPeriod = {};
+        const weekKey = `S${currentWeek}`;
+
+        if (isRecurrent) {
+            if (availabilities.default) {
+                filteredAvailabilities.default = availabilities.default;
+            }
+        } else {
+            if (availabilities[weekKey]) {
+                filteredAvailabilities[weekKey] = availabilities[weekKey];
+            }
+        }
+
+        const newEvents = convertAvailabilitiesToEvents(filteredAvailabilities);
+        setEvents(newEvents);
+    }, [availabilities, isRecurrent, currentWeek]);
+
+    const handleAvailabilityChange = async (newAvailabilities: AvailabilityPeriod) => {
         try {
             const response = await fetch(`/api/admin/intervenant/${intervenantId}/availabilities`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ availabilities: newAvailabilities }),
             });
-
-            if (!response.ok) throw new Error('Failed to save availabilities');
-
             const data = await response.json();
             setAvailabilities(data.availabilities || {});
         } catch (error) {
             console.error('Error saving availabilities:', error);
-            setError('Erreur lors de la sauvegarde des disponibilités');
         }
     };
 
-    // Fonction pour formater les dates du calendrier
-    const formatDayHeader = useCallback((arg: { date: Date, text: string }) => {
+    const handleSelect = useCallback((selectInfo: DateSelectArg) => {
+        const calendarApi = selectInfo.view.calendar;
+        const newEvent: CalendarEvent = {
+            title: 'Disponible',
+            start: selectInfo.startStr,
+            end: selectInfo.endStr,
+            backgroundColor: '#3B82F6',
+            borderColor: '#2563EB'
+        };
+
+        // Check for overlapping events
+        const existingEvents = calendarApi.getEvents();
+        const hasOverlap = existingEvents.some(existingEvent => {
+            const eventData = {
+                start: existingEvent.startStr,
+                end: existingEvent.endStr
+            };
+            return doEventsOverlap(newEvent, eventData as CalendarEvent);
+        });
+
+        if (hasOverlap) {
+            alert('Cette plage horaire chevauche une disponibilité existante.');
+            return;
+        }
+
+        calendarApi.unselect();
+        calendarApi.addEvent(newEvent);
+
+        // Update availabilities
+        const formattedAvailability = formatEventToAvailability(newEvent, selectInfo.view);
+        const weekKey = formattedAvailability.weekKey;
+        const newAvailabilities = { ...availabilities };
+
         if (isRecurrent) {
-            // En mode récurrent, n'afficher que le nom du jour
-            const weekday = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' })
-                .format(arg.date);
-            return weekday.charAt(0).toUpperCase() + weekday.slice(1);
+            newAvailabilities.default = [...(newAvailabilities.default || []), formattedAvailability.availability];
+        } else {
+            newAvailabilities[weekKey] = [...(newAvailabilities[weekKey] || []), formattedAvailability.availability];
         }
-        // En mode normal, utiliser le texte par défaut fourni
-        return arg.text;
-    }, [isRecurrent]);
 
-    // Ajouter un gestionnaire pour les changements de dates
-    const handleDatesSet = useCallback((arg: any) => {
+        handleAvailabilityChange(newAvailabilities);
+    }, [availabilities, isRecurrent, handleAvailabilityChange]);
+
+    const handleEventClick = useCallback((clickInfo: EventClickArg) => {
+        setDeleteModal({
+            isOpen: true,
+            event: {
+                title: clickInfo.event.title,
+                start: clickInfo.event.startStr,
+                end: clickInfo.event.endStr
+            },
+            calendar: calendarRef.current
+        });
+    }, []);
+
+    const handleDeleteEvent = useCallback(() => {
+        if (!deleteModal.event || !deleteModal.calendar) return;
+
+        const calendarApi = deleteModal.calendar.getApi();
+        const formattedAvailability = formatEventToAvailability(deleteModal.event, { currentStart: calendarApi.view.currentStart });
+        const weekKey = formattedAvailability.weekKey;
+        const newAvailabilities = { ...availabilities };
+
+        if (isRecurrent) {
+            newAvailabilities.default = (newAvailabilities.default || []).filter(
+                avail =>
+                    avail.days !== formattedAvailability.availability.days ||
+                    avail.from !== formattedAvailability.availability.from ||
+                    avail.to !== formattedAvailability.availability.to
+            );
+        } else {
+            newAvailabilities[weekKey] = (newAvailabilities[weekKey] || []).filter(
+                avail =>
+                    avail.days !== formattedAvailability.availability.days ||
+                    avail.from !== formattedAvailability.availability.from ||
+                    avail.to !== formattedAvailability.availability.to
+            );
+        }
+
+        handleAvailabilityChange(newAvailabilities);
+        setDeleteModal({ isOpen: false, event: null, calendar: null });
+    }, [availabilities, isRecurrent, deleteModal, handleAvailabilityChange]);
+
+    // const formatDayHeader = useCallback((arg: { date: Date; text: string }) => {
+    //     if (isRecurrent) {
+    //         const weekday = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' })
+    //             .format(arg.date);
+    //         return weekday.charAt(0).toUpperCase() + weekday.slice(1);
+    //     }
+    //     return arg.text;
+    // }, [isRecurrent]);
+
+    const handleDatesSet = useCallback((arg: DatesSetArg) => {
         const date = new Date(arg.start);
-        const weekNum = getWeekNumber(date);
-        setCurrentWeek(weekNum);
-    }, []);
-
-    // Ajouter cette fonction pour vérifier les disponibilités spécifiques
-    const hasSpecificAvailabilities = useMemo(() => {
-        const weekKey = `S${currentWeek}`;
-        return availabilities[weekKey] && availabilities[weekKey].length > 0;
-    }, [availabilities, currentWeek]);
-
-    const handleWeekClick = useCallback((date: Date) => {
-        if (calendarRef.current) {
-            const calendar = calendarRef.current.getApi();
-            calendar.gotoDate(date);
-        }
-    }, []);
+        const week = getWeekNumber(date);
+        setCurrentWeek(week);
+        setHasSpecificAvailabilities(!!availabilities[`S${week}`]?.length);
+    }, [availabilities]);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             <HeaderSection
                 isRecurrent={isRecurrent}
                 onRecurrentChange={setIsRecurrent}
                 hasSpecificAvailabilities={hasSpecificAvailabilities}
                 currentWeek={currentWeek}
                 workweek={workweek}
+                availabilities={availabilities}
             />
 
             <WeekIndicator
                 availabilities={availabilities}
-                onWeekClick={handleWeekClick}
+                onWeekClick={(date) => {
+                    if (calendarRef.current) {
+                        calendarRef.current.getApi().gotoDate(date);
+                    }
+                }}
+                onModeChange={setIsRecurrent}
             />
 
-            {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-                    {error}
-                </div>
-            )}
-
-            {/* Avertissements pour les semaines manquantes */}
-            {analysis.missingWeeks.length > 0 && (
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-                    <div className="flex items-center">
-                        <AlertTriangle className="h-5 w-5 text-yellow-400 mr-2" />
-                        <h3 className="text-sm font-medium text-yellow-800">
-                            Semaines sans disponibilité
-                        </h3>
-                    </div>
-                    <div className="mt-2 text-sm text-yellow-700">
-                        <ul className="list-disc pl-5 space-y-1">
-                            {analysis.missingWeeks.map(week => (
-                                <li key={week.week}>
-                                    Semaine {week.week} ({formatWeekWarning(week.week)}) - {week.hours}h prévues
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
-            )}
-
-            {/* Avertissements pour les heures insuffisantes */}
-            {analysis.insufficientHours.length > 0 && (
-                <div className="bg-orange-50 border-l-4 border-orange-400 p-4">
-                    <div className="flex items-center">
-                        <AlertCircle className="h-5 w-5 text-orange-400 mr-2" />
-                        <h3 className="text-sm font-medium text-orange-800">
-                            Disponibilités insuffisantes
-                        </h3>
-                    </div>
-                    <div className="mt-2 text-sm text-orange-700">
-                        <ul className="list-disc pl-5 space-y-1">
-                            {analysis.insufficientHours.map(week => (
-                                <li key={week.week}>
-                                    Semaine {week.week} ({formatWeekWarning(week.week)}) <span className="w-4"></span>
-                                    {week.available.toFixed(1)}h disponibles sur {week.required}h requises
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
-            )}
-
-            {lastUpdate && (
-                <div className="text-sm text-gray-600">
-                    Dernière modification : {new Date(lastUpdate).toLocaleString('fr-FR', {
-                        dateStyle: 'long',
-                        timeStyle: 'short'
-                    })}
-                </div>
-            )}
-
-            <div className="h-[600px] bg-white p-4 rounded-lg shadow">
+            <div className="bg-white rounded-lg shadow">
                 <FullCalendar
                     ref={calendarRef}
                     plugins={[timeGridPlugin, interactionPlugin]}
                     initialView="timeGridWeek"
-                    headerToolbar={{
-                        left: 'prev,next today',
-                        center: 'title',
-                        right: 'timeGridWeek'
-                    }}
+                    selectable={true}
+                    selectMirror={true}
+                    dayMaxEvents={true}
+                    weekends={false}
+                    allDaySlot={false}
                     locale={frLocale}
                     slotMinTime="08:00:00"
-                    slotMaxTime="19:30:00"
-                    allDaySlot={false}
-                    weekends={false}
-                    events={events}
-                    height="100%"
-                    selectable={true}
+                    slotMaxTime="19:00:00"
+                    validRange={getAcademicYearDates()}
                     select={handleSelect}
-                    validRange={{
-                        start: academicYear.start,
-                        end: academicYear.end
-                    }}
-                    selectConstraint={{
-                        start: '08:00',
-                        end: '19:30',
-                        dows: [1, 2, 3, 4, 5]
-                    }}
-                    selectMirror={true}
                     eventClick={handleEventClick}
-                    unselectAuto={true}
-                    dayHeaderFormat={isRecurrent ? {
-                        weekday: 'long',
-                        month: undefined,
-                        day: undefined,
-                        year: undefined,
-                        omitCommas: true
-                    } : {
-                        weekday: 'short',
-                        month: 'numeric',
-                        day: 'numeric',
+                    headerToolbar={{ start: 'prev,today,next', center: '', end: '' }}
+                    events={events}
+                    dayHeaderFormat={{
+                        weekday: isRecurrent ? 'long' : 'short',
+                        month: isRecurrent ? undefined : 'numeric',
+                        day: isRecurrent ? undefined : 'numeric',
                         omitCommas: true
                     }}
-                    dayHeaderFormatter={formatDayHeader}
                     datesSet={handleDatesSet}
                 />
             </div>
@@ -666,7 +509,7 @@ export default function IntervenantCalendar({ intervenantId }: { intervenantId: 
             <DeleteModal
                 isOpen={deleteModal.isOpen}
                 onClose={() => setDeleteModal({ isOpen: false, event: null, calendar: null })}
-                onConfirm={handleDeleteConfirm}
+                onConfirm={handleDeleteEvent}
             />
         </div>
     );

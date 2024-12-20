@@ -46,8 +46,9 @@ export default function IntervenantsList({ selectedId, onShowCalendar }: Interve
             const data = await getIntervenants();
             setIntervenants(data);
             setError(null);
-        } catch (err) {
+        } catch (_error) {
             setError('Erreur lors du chargement des intervenants');
+            console.error('Error fetching intervenants:', _error);
         } finally {
             setLoading(false);
         }
@@ -70,7 +71,7 @@ export default function IntervenantsList({ selectedId, onShowCalendar }: Interve
 
     const handleRegenerateKey = async (id: string) => {
         try {
-            const updatedIntervenant = await regenerateConnectKey(id);
+            await regenerateConnectKey(id);
             fetchIntervenants();
         } catch (error) {
             console.error('Error regenerating key:', error);
@@ -130,8 +131,8 @@ export default function IntervenantsList({ selectedId, onShowCalendar }: Interve
                                 <button
                                     onClick={() => onShowCalendar(intervenant.id)}
                                     className={`px-3 py-1 rounded-md text-sm ${selectedId === intervenant.id
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                                         }`}
                                 >
                                     {selectedId === intervenant.id ? 'Masquer' : 'Voir'} le calendrier

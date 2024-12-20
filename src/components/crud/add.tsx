@@ -50,9 +50,9 @@ export default function AddIntervenant({ onIntervenantAdded }: { onIntervenantAd
                 connect_key_validity_days: 30
             });
             onIntervenantAdded();
-        } catch (err: any) {
+        } catch (error) {
             // Extraire le message d'erreur de la réponse de l'API si disponible
-            const errorMessage = err.message || 'Erreur lors de la création de l\'intervenant';
+            const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la création de l\'intervenant';
             setError(errorMessage);
             setSuccess(false);
         }

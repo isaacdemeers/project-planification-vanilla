@@ -27,7 +27,7 @@ export default function LoginForm() {
             router.push('/dashboard');
             router.refresh();
         } catch (error) {
-            setError('Une erreur est survenue');
+            setError('Une erreur est survenue' + error);
         }
     }
 

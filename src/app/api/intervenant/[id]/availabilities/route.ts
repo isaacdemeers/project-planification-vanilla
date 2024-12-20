@@ -57,10 +57,10 @@ export async function PUT(
         } finally {
             client.release();
         }
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
         console.error('Error in PUT:', error);
         return NextResponse.json(
-            { error: 'Failed to update availabilities', details: error.message },
+            { error: 'Failed to update availabilities', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }

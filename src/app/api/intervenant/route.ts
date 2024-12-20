@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db.server';
-import { Intervenant } from '@/lib/requests';
+
+interface DatabaseError extends Error {
+    code?: string;
+}
 
 async function ensureTableExists() {
     try {
@@ -64,9 +67,12 @@ export async function GET() {
         const result = await client.query('SELECT * FROM "Intervenant"');
         client.release();
         return NextResponse.json(result.rows);
-    } catch (error: any) {
+    } catch (error) {
         console.error('Error in GET:', error);
-        return NextResponse.json({ error: 'Failed to fetch intervenants', details: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: 'Failed to fetch intervenants', details: error instanceof Error ? error.message : 'Unknown error' },
+            { status: 500 }
+        );
     }
 }
 
@@ -100,9 +106,9 @@ export async function POST(request: Request) {
                 [body.name, body.lastname, body.availabilities || {}, body.email, defaultValidity]
             );
             return NextResponse.json(result.rows[0]);
-        } catch (error: any) {
+        } catch (error) {
             console.error('Database error:', error);
-            if (error.code === '23505') {
+            if (error instanceof Error && 'code' in error && (error as DatabaseError).code === '23505') {
                 return NextResponse.json(
                     { error: 'Email already exists' },
                     { status: 400 }
@@ -112,9 +118,9 @@ export async function POST(request: Request) {
         } finally {
             client.release();
         }
-    } catch (error: any) {
+    } catch (error) {
         return NextResponse.json(
-            { error: 'Failed to create intervenant', details: error.message },
+            { error: 'Failed to create intervenant', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }

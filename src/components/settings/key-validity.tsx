@@ -18,6 +18,7 @@ export default function KeyValiditySettings() {
             const data = await response.json();
             setDays(data.days);
         } catch (error) {
+            console.error('Error fetching settings:', error);
             setError('Erreur lors du chargement des paramètres');
         } finally {
             setLoading(false);
@@ -44,6 +45,7 @@ export default function KeyValiditySettings() {
             setError(null);
             setTimeout(() => setSuccess(false), 3000);
         } catch (error) {
+            console.error('Error updating settings:', error);
             setError('Erreur lors de la mise à jour');
         }
     };
